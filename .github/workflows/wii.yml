@@ -1,0 +1,45 @@
+name: Wii build
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitppc:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install portlibs
+        shell: bash
+        run: |
+          source $DEVKITPRO/wiivars.sh
+          yes | dkp-pacman -S wii-sdl2 ppc-zlib ppc-libjpeg-turbo ppc-libpng ppc-libogg ppc-libvorbis ppc-mpg123
+
+      - name: Compile libopenmpt for Wii
+        shell: bash
+        run: |
+          source $DEVKITPRO/wiivars.sh
+          git clone https://github.com/OpenMPT/openmpt
+          cd openmpt
+          make CONFIG=gcc SHARED_LIB=0 DYNLINK=0 EXAMPLES=0 OPENMPT123=0 TEST=0 PREFIX=$PORTLIBS_PREFIX install
+
+      - name: Run CMake and compile
+        shell: bash
+        run: |
+          source $DEVKITPRO/wiivars.sh
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Wii.cmake -DCMAKE_BUILD_TYPE=MinSizeRel
+          make
+
+      - name: Upload .dol artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: re-plants-vs-zombies.dol
+          path: ./build/re-plants-vs-zombies.dol
+
+      - name: Upload .elf artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: re-plants-vs-zombies.elf
+          path: ./build/re-plants-vs-zombies.elf

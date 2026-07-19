@@ -55,6 +55,18 @@ elseif(NINTENDO_3DS)
 	list(APPEND PLAT_INCLUDES
 		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/3ds
 	)
+elseif(NINTENDO_WII)
+	set(NO_GLEW ON)
+	set(LOW_MEMORY ON)
+	set(DOWNSCALE_COUNT 2)
+	list(APPEND SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/graphics/Window.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/graphics/GLInterface.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/Input.cpp
+	)
+	list(APPEND PLAT_INCLUDES
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii
+	)
 else()
 	set(VORBIS_LIBS vorbisfile vorbis)
 	list(APPEND SOURCES
@@ -138,6 +150,12 @@ elseif (NINTENDO_3DS)
 	ctr_create_3dsx(re-plants-vs-zombies
 		SMDH re-plants-vs-zombies.smdh
 	)
+elseif (NINTENDO_WII)
+	target_compile_definitions(re-plants-vs-zombies PRIVATE NINTENDO_WII)
+	target_link_libraries(re-plants-vs-zombies ogc)
+
+	# produces re-plants-vs-zombies.dol next to the .elf
+	ogc_create_dol(re-plants-vs-zombies)
 else()
 	target_link_libraries(re-plants-vs-zombies GL)
 endif()
