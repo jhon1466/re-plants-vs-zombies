@@ -67,12 +67,25 @@ static void DrawState()
 		gPakInterface->FClose(aTestFile);
 	}
 
+	// Seventh row: TodLoadNextResource() call count (1px per call, capped at
+	// 600) - if this climbs steadily the resource load is just slow; if it
+	// freezes at a fixed number, that call is genuinely stuck (infinite loop)
+	int aLoopCount = ::gWiiDebugResourceLoopCount;
+	int aLoopBarWidth = aLoopCount > 600 ? 600 : aLoopCount;
+	aGL->FillRect(Rect(10, 190, 600, 20), Color(64, 64, 64), Graphics::DRAWMODE_NORMAL);
+	aGL->FillRect(Rect(10, 190, aLoopBarWidth, 20), Color(128, 255, 128), Graphics::DRAWMODE_NORMAL);
+
 	aGL->Redraw();
 }
 
 void WiiDebugCheckpoint(int theId)
 {
 	gCheckpointMask |= 1u << theId;
+	DrawState();
+}
+
+void WiiDebugRedraw()
+{
 	DrawState();
 }
 

@@ -15,6 +15,10 @@
 #include "misc/PerfTimer.h"
 #include "misc/SexyMatrix.h"
 #include "graphics/GLInterface.h"
+#ifdef NINTENDO_WII
+#include "platform/wii/WiiDebug.h"
+int gWiiDebugResourceLoopCount = 0;
+#endif
 
 //0x510BC0
 void Tod_SWTri_AddAllDrawTriFuncs()
@@ -1130,11 +1134,24 @@ bool TodResourceManager::TodLoadNextResource()
 	//GetTickCount();
 	TodHesitationTrace("preres");
 
+#ifdef NINTENDO_WII
+	++gWiiDebugResourceLoopCount;
+	if ((gWiiDebugResourceLoopCount % 10) == 0)
+		WiiDebugRedraw();
+#endif
+
 	while (mCurResGroupListItr != mCurResGroupList->end())
 	{
 		BaseRes* aRes = *mCurResGroupListItr;
 		if (aRes->mFromProgram)
+		{
+			// must advance past this entry before retrying, otherwise this
+			// is a genuine infinite loop (never returns, unlike the
+			// sibling ResourceManager::LoadNextResource(), which does
+			// "*mCurResGroupListItr++" and correctly steps forward here)
+			++mCurResGroupListItr;
 			continue;
+		}
 
 		switch (aRes->mType)
 		{
