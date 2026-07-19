@@ -6,6 +6,10 @@
 #include <string>
 #include <cstdint>
 
+#ifdef NINTENDO_WII
+#include "platform/wii/Mem2Alloc.h"
+#endif
+
 class PakCollection;
 
 // [定义]资源包文件：包含了若干游戏资源的 .pak 文件。例如：main.pak
@@ -36,9 +40,15 @@ public:
 	//HANDLE					mMappingHandle;
 	void*						mDataPtr;				//+0x8：资源包中的所有数据
 
+#ifdef NINTENDO_WII
+	// main.pak alone is tens of MB - nowhere near fitting in MEM1's 24MB
+	// malloc() heap, so pak collections get allocated straight out of MEM2.
+	explicit PakCollection(size_t size) { mDataPtr = Mem2Alloc(size); }
+	~PakCollection() { Mem2Free(mDataPtr); }
+#else
 	explicit PakCollection(size_t size) { mDataPtr = malloc(size); }
-
 	~PakCollection() { free(mDataPtr); }
+#endif
 };
 
 typedef std::list<PakCollection> PakCollectionList;
