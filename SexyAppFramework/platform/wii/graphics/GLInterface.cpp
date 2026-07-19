@@ -1217,7 +1217,6 @@ int GLInterface::Init(bool IsWindowed)
 
 		VIDEO_Init();
 		gRMode = VIDEO_GetPreferredMode(NULL);
-		printf("WII DEBUG: rmode fbWidth=%d efbHeight=%d xfbHeight=%d viTVMode=%d\n", gRMode->fbWidth, gRMode->efbHeight, gRMode->xfbHeight, gRMode->viTVMode);
 
 		gXfb[0] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(gRMode));
 		gXfb[1] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(gRMode));
@@ -1231,12 +1230,9 @@ int GLInterface::Init(bool IsWindowed)
 		if (gRMode->viTVMode & VI_NON_INTERLACE)
 			VIDEO_WaitVSync();
 
-		printf("WII DEBUG: VIDEO setup done, starting GX_Init\n");
-
 		gGpFifo = memalign(32, DEFAULT_FIFO_SIZE);
 		memset(gGpFifo, 0, DEFAULT_FIFO_SIZE);
 		GX_Init(gGpFifo, DEFAULT_FIFO_SIZE);
-		printf("WII DEBUG: GX_Init done\n");
 
 		GXColor aBackground = {0, 0, 0, 0xff};
 		GX_SetCopyClear(aBackground, GX_MAX_Z24);

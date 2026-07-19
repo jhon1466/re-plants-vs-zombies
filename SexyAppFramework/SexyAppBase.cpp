@@ -27,6 +27,8 @@
 #include "graphics/GLInterface.h"
 #include "graphics/GLImage.h"
 #include "graphics/MemoryImage.h"
+#include "graphics/Graphics.h"
+#include "graphics/Color.h"
 //#include "misc/HTTPTransfer.h"
 #include "widget/Dialog.h"
 #include "imagelib/ImageLib.h"
@@ -5078,16 +5080,17 @@ void SexyAppBase::Init()
 	SetAppDataFolder(aPath);
 
 #ifdef NINTENDO_WII
-	printf("WII DEBUG: mChangeDirTo='%s'\n", mChangeDirTo.c_str());
-	char aCwd[512];
-	getcwd(aCwd, 512);
-	printf("WII DEBUG: cwd after chdir='%s'\n", aCwd);
+	// WII DEBUG: cyan breadcrumb square = chdir/SetAppDataFolder done, about to load main.pak
+	mGLInterface->FillRect(Rect(10, 10, 40, 40), Color(0, 255, 255), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
 #endif
 
 	bool aPakLoaded = gPakInterface->AddPakFile("main.pak");
 
 #ifdef NINTENDO_WII
-	printf("WII DEBUG: AddPakFile(main.pak) = %d\n", (int)aPakLoaded);
+	// WII DEBUG: white = main.pak loaded ok, orange = AddPakFile returned false
+	mGLInterface->FillRect(Rect(10, 10, 40, 40), aPakLoaded ? Color(255, 255, 255) : Color(255, 128, 0), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
 #endif
 
 	// Create a message we can use to talk to ourselves inter-process
