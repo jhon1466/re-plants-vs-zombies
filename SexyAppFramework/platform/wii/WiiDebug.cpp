@@ -32,7 +32,8 @@ static void DrawState()
 	aGL->FillRect(Rect(10, 10, ::gWiiDebugPakStep * 20, 20), Color(0, 255, 0), Graphics::DRAWMODE_NORMAL);
 
 	// Second row: one square per boot checkpoint reached (cyan) vs not (dark)
-	for (int i = 0; i < 20; i++)
+	// 20/21 = about-to/returned DoLoadImage, 22/23 = DoLoadSound, 24/25 = DoLoadFont
+	for (int i = 0; i < 26; i++)
 	{
 		bool aHit = (gCheckpointMask >> i) & 1;
 		aGL->FillRect(Rect(10 + i * 22, 40, 18, 18), aHit ? Color(0, 200, 255) : Color(48, 48, 48), Graphics::DRAWMODE_NORMAL);

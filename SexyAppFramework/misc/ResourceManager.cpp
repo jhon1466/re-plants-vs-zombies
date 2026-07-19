@@ -11,6 +11,10 @@
 //#define SEXY_PERF_ENABLED
 #include "PerfTimer.h"
 
+#ifdef NINTENDO_WII
+#include "platform/wii/WiiDebug.h"
+#endif
+
 using namespace Sexy;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -972,31 +976,52 @@ bool ResourceManager::LoadNextResource()
 
 		switch (aRes->mType)
 		{
-			case ResType_Image: 
+			case ResType_Image:
 			{
 				ImageRes *anImageRes = (ImageRes*)aRes;
 				if ((GLImage*)anImageRes->mImage!=NULL)
 					continue;
 
-				return DoLoadImage(anImageRes); 
+#ifdef NINTENDO_WII
+				WiiDebugCheckpoint(20); // about to DoLoadImage
+#endif
+				bool aResult = DoLoadImage(anImageRes);
+#ifdef NINTENDO_WII
+				WiiDebugCheckpoint(21); // DoLoadImage returned
+#endif
+				return aResult;
 			}
-			
-			case ResType_Sound: 
+
+			case ResType_Sound:
 			{
 				SoundRes *aSoundRes = (SoundRes*)aRes;
 				if (aSoundRes->mSoundId!=-1)
 					continue;
 
-				return DoLoadSound(aSoundRes); 
+#ifdef NINTENDO_WII
+				WiiDebugCheckpoint(22); // about to DoLoadSound
+#endif
+				bool aResult = DoLoadSound(aSoundRes);
+#ifdef NINTENDO_WII
+				WiiDebugCheckpoint(23); // DoLoadSound returned
+#endif
+				return aResult;
 			}
-			
-			case ResType_Font: 
+
+			case ResType_Font:
 			{
 				FontRes *aFontRes = (FontRes*)aRes;
 				if (aFontRes->mFont!=NULL)
 					continue;
 
-				return DoLoadFont(aFontRes);
+#ifdef NINTENDO_WII
+				WiiDebugCheckpoint(24); // about to DoLoadFont
+#endif
+				bool aResult = DoLoadFont(aFontRes);
+#ifdef NINTENDO_WII
+				WiiDebugCheckpoint(25); // DoLoadFont returned
+#endif
+				return aResult;
 			}
 		}
 	}
