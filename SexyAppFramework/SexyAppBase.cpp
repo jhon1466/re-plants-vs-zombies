@@ -48,6 +48,10 @@
 #include "sound/DummyMusicInterface.h"
 #include "fcaseopen/fcaseopen.h"
 
+#ifdef NINTENDO_WII
+#include "platform/wii/WiiDebug.h"
+#endif
+
 #include "misc/memmgr.h"
 #include "misc/RegEmu.h"
 
@@ -4475,14 +4479,7 @@ bool SexyAppBase::Process(bool allowSleep)
 void SexyAppBase::DoMainLoop()
 {
 #ifdef NINTENDO_WII
-	// WII DEBUG: row 4, orange - fires once, first time DoMainLoop actually runs
-	static bool sWiiDebugFirstLoop = true;
-	if (sWiiDebugFirstLoop)
-	{
-		sWiiDebugFirstLoop = false;
-		mGLInterface->FillRect(Rect(10, 110, 20, 20), Color(255, 165, 0), Graphics::DRAWMODE_NORMAL);
-		mGLInterface->Redraw();
-	}
+	WiiDebugCheckpoint(12); // first time DoMainLoop actually runs
 #endif
 
 	while (!mShutdown)
@@ -4601,9 +4598,7 @@ void SexyAppBase::Start()
 		return;
 
 #ifdef NINTENDO_WII
-	// WII DEBUG: third row, purple - Start() entered
-	mGLInterface->FillRect(Rect(10, 80, 1 * 20, 20), Color(200, 0, 255), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(9); // Start() entered
 #endif
 
 	StartCursorThread();
@@ -4612,11 +4607,7 @@ void SexyAppBase::Start()
 		StartLoadingThread();
 
 #ifdef NINTENDO_WII
-	// mAutoStartLoadingThread spawns a real pthread (LoadingThreadProcStub) -
-	// if that thread (or something it depends on) hangs, we'd still reach
-	// here fine since pthread_create() only blocks until the thread launches
-	mGLInterface->FillRect(Rect(10, 80, 2 * 20, 20), Color(200, 0, 255), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(10); // loading thread spawned (pthread_create returned)
 #endif
 
 	//::ShowWindow(mHWnd, SW_SHOW);
@@ -4635,9 +4626,7 @@ void SexyAppBase::Start()
 	mLastTimerTime = aStartTime;
 
 #ifdef NINTENDO_WII
-	// about to enter the real per-frame game loop
-	mGLInterface->FillRect(Rect(10, 80, 3 * 20, 20), Color(200, 0, 255), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(11); // about to enter the per-frame game loop
 #endif
 
 	DoMainLoop();
@@ -5256,15 +5245,9 @@ void SexyAppBase::Init()
 	MakeWindow();
 
 #ifdef NINTENDO_WII
-	// WII DEBUG: mGLInterface is guaranteed valid here (MakeWindow() just ran).
-	// Dark gray bar = full 0-9 scale; green fill width = 20px per step
-	// AddPakFile("main.pak") actually reached (see PakInterface.h/.cpp for
-	// what each step number means - step 9 = fully succeeded). ::-qualified
-	// since this file does "using namespace Sexy;" and the variable lives in
-	// the global namespace (declared in PakInterface.h, which is included above).
-	mGLInterface->FillRect(Rect(10, 10, 9 * 20, 30), Color(64, 64, 64), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->FillRect(Rect(10, 10, ::gWiiDebugPakStep * 20, 30), Color(0, 255, 0), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	// mGLInterface is guaranteed valid from here on; this also draws the
+	// pak-load progress recorded earlier (before the renderer existed)
+	WiiDebugCheckpoint(1);
 #endif
 
 	if (mPlayingDemoBuffer)
@@ -5296,25 +5279,19 @@ void SexyAppBase::Init()
 	}
 
 #ifdef NINTENDO_WII
-	// WII DEBUG: second row, blue - tracks how far past Init() we get, since
-	// AddPakFile failing fast (see the row above) rules out the hang being
-	// inside pak loading itself; something later is what's actually stuck.
-	mGLInterface->FillRect(Rect(10, 50, 1 * 20, 20), Color(0, 128, 255), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(2); // reached tail of SexyAppBase::Init(), about to InitHook()
 #endif
 
 	InitHook();
 
 #ifdef NINTENDO_WII
-	mGLInterface->FillRect(Rect(10, 50, 2 * 20, 20), Color(0, 128, 255), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(3); // InitHook() returned, about to InitInput()
 #endif
 
 	InitInput();
 
 #ifdef NINTENDO_WII
-	mGLInterface->FillRect(Rect(10, 50, 3 * 20, 20), Color(0, 128, 255), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(4); // InitInput() returned (WPAD/PAD init didn't hang)
 #endif
 
 	mInitialized = true;

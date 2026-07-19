@@ -33,7 +33,7 @@
 #include "Sexy.TodLib/FilterEffect.h"
 #include "graphics/Graphics.h"
 #ifdef NINTENDO_WII
-#include "graphics/GLInterface.h"
+#include "platform/wii/WiiDebug.h"
 #endif
 #include "Sexy.TodLib/TodStringFile.h"
 #include "Lawn/Widget/AlmanacDialog.h"
@@ -1277,39 +1277,30 @@ void LawnApp::Init()
 //#endif
 
 #ifdef NINTENDO_WII
-	// WII DEBUG: row 6, teal - SexyApp::Init() (SexyAppBase's boot sequence)
-	// returned; LawnApp's own init (resources.xml, TodLoadResources) is next
-	mGLInterface->FillRect(Rect(10, 170, 1 * 20, 20), Color(0, 255, 200), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(5); // SexyApp::Init() returned; LawnApp's own init next
 #endif
 
-#ifdef NINTENDO_WII
-	bool aWiiDebugParsedOk = mResourceManager->ParseResourcesFile("properties/resources.xml");
-	// row 6 step 2: ParseResourcesFile *returned* at all (didn't hang inside
-	// it) - green = returned true, red = returned false
-	mGLInterface->FillRect(Rect(10, 170, 2 * 20, 20), aWiiDebugParsedOk ? Color(0, 255, 0) : Color(255, 0, 0), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
-	if (!aWiiDebugParsedOk)
-	{
-		// row 7, magenta - about to call ShowResourceError
-		mGLInterface->FillRect(Rect(10, 200, 1 * 20, 20), Color(255, 0, 255), Graphics::DRAWMODE_NORMAL);
-		mGLInterface->Redraw();
-		ShowResourceError(true);
-		// ShowResourceError() itself returned (didn't hang)
-		mGLInterface->FillRect(Rect(10, 200, 2 * 20, 20), Color(255, 0, 255), Graphics::DRAWMODE_NORMAL);
-		mGLInterface->Redraw();
-		return;
-	}
-#else
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
 	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(13); // ParseResourcesFile returned false
+#endif
 		ShowResourceError(true);
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(7); // ShowResourceError() itself returned (didn't hang)
+#endif
 		return;
 	}
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(6); // ParseResourcesFile returned true
 #endif
 
 	if (!TodLoadResources("Init"))
 	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(14); // TodLoadResources("Init") returned false
+#endif
 		return;
 	}
 
@@ -1317,8 +1308,7 @@ void LawnApp::Init()
 	// TodLoadResources("Init") succeeded - this is the one most likely to
 	// hang, since it presumably pulls fonts/images out of main.pak, which
 	// never actually loaded (AddPakFile stuck at step 0 - see the top row)
-	mGLInterface->FillRect(Rect(10, 170, 3 * 20, 20), Color(0, 255, 200), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	WiiDebugCheckpoint(8);
 #endif
 
 	PerfTimer mTimer;

@@ -64,6 +64,7 @@ elseif(NINTENDO_WII)
 		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/graphics/GLInterface.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/Input.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/Mem2Alloc.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/WiiDebug.cpp
 	)
 	list(APPEND PLAT_INCLUDES
 		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii
