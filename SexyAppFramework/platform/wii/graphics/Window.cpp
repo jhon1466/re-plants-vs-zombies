@@ -13,7 +13,10 @@ void SexyAppBase::MakeWindow()
 {
 	if (mGLInterface == NULL)
 	{
-		setvbuf(stdout, NULL, _IONBF, 0); // WII DEBUG: make printf visible immediately in Dolphin's log
+		// WII DEBUG: redirect stdout/stderr to Dolphin's OSReport log so printf is visible there
+		SYS_STDIO_Report(true);
+		setvbuf(stdout, NULL, _IONBF, 0);
+		printf("WII DEBUG: MakeWindow() start\n");
 
 		// mounts the SD card (sdmc:/) so main.pak/properties can be read; must
 		// happen before anything under Resources.cpp tries to open a file
