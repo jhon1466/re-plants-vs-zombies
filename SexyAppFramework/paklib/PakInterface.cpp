@@ -12,6 +12,17 @@ enum
 	FILEFLAGS_END = 0x80
 };
 
+// main.pak's table of contents stores multi-byte fields little-endian (it was
+// authored for x86); PowerPC (Wii, and eventually Wii U) is big-endian, so
+// every multi-byte field read from the file needs byte-swapping there.
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define PAK_LE32(x) __builtin_bswap32(x)
+#define PAK_LE64(x) __builtin_bswap64(x)
+#else
+#define PAK_LE32(x) (x)
+#define PAK_LE64(x) (x)
+#endif
+
 PakInterface* gPakInterface = new PakInterface();
 
 static std::string StringToUpper(const std::string& theString)
@@ -151,6 +162,7 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 
 	uint32_t aMagic = 0;
 	FRead(&aMagic, sizeof(uint32_t), 1, aFP);
+	aMagic = PAK_LE32(aMagic);
 	if (aMagic != 0xBAC04AC0)
 	{
 		FClose(aFP);
@@ -159,6 +171,7 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 
 	uint32_t aVersion = 0;
 	FRead(&aVersion, sizeof(uint32_t), 1, aFP);
+	aVersion = PAK_LE32(aVersion);
 	if (aVersion > 0)
 	{
 		FClose(aFP);
@@ -181,8 +194,10 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 		aName[aNameWidth] = 0;
 		int aSrcSize = 0;
 		FRead(&aSrcSize, sizeof(int), 1, aFP);
+		aSrcSize = (int)PAK_LE32((uint32_t)aSrcSize);
 		int64_t aFileTime;
 		FRead(&aFileTime, sizeof(int64_t), 1, aFP);
+		aFileTime = (int64_t)PAK_LE64((uint64_t)aFileTime);
 
 		for (int i=0; i<aNameWidth; i++)
 		{
