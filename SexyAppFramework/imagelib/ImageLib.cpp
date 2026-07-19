@@ -14,6 +14,17 @@ extern "C"
 
 using namespace ImageLib;
 
+// TGA (and other simple container formats parsed byte-by-byte below) store
+// multi-byte header fields little-endian; reading them straight into a
+// native WORD is silently wrong on a big-endian target like Wii - e.g. a
+// real width of 130 gets read back as 33280, which is exactly the kind of
+// corrupt value that makes "new uint32_t[width*height]" hang/fail.
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define IMG_LE16(x) __builtin_bswap16(x)
+#else
+#define IMG_LE16(x) (x)
+#endif
+
 Image::Image()
 {
 	mWidth = 0;
@@ -183,10 +194,12 @@ Image* GetTGAImage(const std::string& theFileName)
 	p_fread(&aYOrigin, sizeof(WORD), 1, aTGAFile);
 
 	WORD anImageWidth;
-	p_fread(&anImageWidth, sizeof(WORD), 1, aTGAFile);	
+	p_fread(&anImageWidth, sizeof(WORD), 1, aTGAFile);
+	anImageWidth = IMG_LE16(anImageWidth);
 
 	WORD anImageHeight;
-	p_fread(&anImageHeight, sizeof(WORD), 1, aTGAFile);	
+	p_fread(&anImageHeight, sizeof(WORD), 1, aTGAFile);
+	anImageHeight = IMG_LE16(anImageHeight);
 
 	BYTE aBitCount = 32;
 	p_fread(&aBitCount, sizeof(BYTE), 1, aTGAFile);	
@@ -276,7 +289,9 @@ Image* GetGIFImage(const std::string& theFileName)
 
 	// 读取逻辑屏幕描述符，共 7 字节
 	p_fread(&pw, sizeof(short), 1, fp);  // 读取图像渲染区域的宽度
+	pw = (short)IMG_LE16((unsigned short)pw);
 	p_fread(&ph, sizeof(short), 1, fp);  // 读取图像渲染区域的高度
+	ph = (short)IMG_LE16((unsigned short)ph);
 	p_fread(&flag, sizeof(char), 1, fp);  // 读取图像标志
 	p_fread(&background, sizeof(char), 1, fp);  // 读取背景色在全局颜色列表中的索引，若无全局颜色列表则此字节无效
 	p_fread(&c, sizeof(char), 1, fp);  // 读取像素宽高比
