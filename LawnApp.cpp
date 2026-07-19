@@ -32,6 +32,9 @@
 #include "Sexy.TodLib/EffectSystem.h"
 #include "Sexy.TodLib/FilterEffect.h"
 #include "graphics/Graphics.h"
+#ifdef NINTENDO_WII
+#include "graphics/GLInterface.h"
+#endif
 #include "Sexy.TodLib/TodStringFile.h"
 #include "Lawn/Widget/AlmanacDialog.h"
 #include "Lawn/Widget/NewUserDialog.h"
