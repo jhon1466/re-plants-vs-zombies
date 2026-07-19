@@ -1,5 +1,5 @@
-#ifndef __COLOR_H__
-#define __COLOR_H__
+#ifndef __SEXY_COLOR_H__
+#define __SEXY_COLOR_H__
 
 #include "Common.h"
 
@@ -47,4 +47,4 @@ bool operator!=(const Color& theColor1, const Color& theColor2);
 
 }
 
-#endif //__COLOR_H__
+#endif //__SEXY_COLOR_H__
