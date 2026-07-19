@@ -46,8 +46,26 @@ static void DrawState()
 	// - green = found something, red = not found by either path
 	PFILE* aTestFile = gPakInterface->FOpen("properties/resources.xml", "rb");
 	aGL->FillRect(Rect(10, 100, 40, 20), aTestFile ? Color(0, 255, 0) : Color(255, 0, 0), Graphics::DRAWMODE_NORMAL);
+
+	// Fifth+sixth rows: the first two raw bytes actually read out of that
+	// file, one row of 8 bit-squares each (MSB first) - if this is a real
+	// resources.xml the first byte should be '<' (0x3C = 00111100) or an
+	// XML/UTF BOM byte (0xEF/0xFF/0xFE); anything else means we're reading
+	// garbage (wrong offset/size) rather than genuinely missing content
 	if (aTestFile)
+	{
+		unsigned char aBytes[2] = {0, 0};
+		gPakInterface->FRead(aBytes, 1, 2, aTestFile);
+		for (int aByteIdx = 0; aByteIdx < 2; aByteIdx++)
+		{
+			for (int aBit = 0; aBit < 8; aBit++)
+			{
+				bool aSet = (aBytes[aByteIdx] >> (7 - aBit)) & 1;
+				aGL->FillRect(Rect(10 + aBit * 22, 130 + aByteIdx * 30, 18, 18), aSet ? Color(255, 0, 128) : Color(48, 48, 48), Graphics::DRAWMODE_NORMAL);
+			}
+		}
 		gPakInterface->FClose(aTestFile);
+	}
 
 	aGL->Redraw();
 }
