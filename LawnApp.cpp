@@ -1283,16 +1283,29 @@ void LawnApp::Init()
 	mGLInterface->Redraw();
 #endif
 
+#ifdef NINTENDO_WII
+	bool aWiiDebugParsedOk = mResourceManager->ParseResourcesFile("properties/resources.xml");
+	// row 6 step 2: ParseResourcesFile *returned* at all (didn't hang inside
+	// it) - green = returned true, red = returned false
+	mGLInterface->FillRect(Rect(10, 170, 2 * 20, 20), aWiiDebugParsedOk ? Color(0, 255, 0) : Color(255, 0, 0), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+	if (!aWiiDebugParsedOk)
+	{
+		// row 7, magenta - about to call ShowResourceError
+		mGLInterface->FillRect(Rect(10, 200, 1 * 20, 20), Color(255, 0, 255), Graphics::DRAWMODE_NORMAL);
+		mGLInterface->Redraw();
+		ShowResourceError(true);
+		// ShowResourceError() itself returned (didn't hang)
+		mGLInterface->FillRect(Rect(10, 200, 2 * 20, 20), Color(255, 0, 255), Graphics::DRAWMODE_NORMAL);
+		mGLInterface->Redraw();
+		return;
+	}
+#else
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
 	{
 		ShowResourceError(true);
 		return;
 	}
-
-#ifdef NINTENDO_WII
-	// ParseResourcesFile("properties/resources.xml") succeeded
-	mGLInterface->FillRect(Rect(10, 170, 2 * 20, 20), Color(0, 255, 200), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
 #endif
 
 	if (!TodLoadResources("Init"))
