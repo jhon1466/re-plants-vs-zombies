@@ -103,6 +103,9 @@ add_executable(re-plants-vs-zombies ${SOURCES})
 target_include_directories(re-plants-vs-zombies PRIVATE
 	${PROJECT_SOURCE_DIR}/SexyAppFramework
 	${PROJECT_SOURCE_DIR}/SexyAppFramework/sound/SDL-Mixer-X/include
+	${ZLIB_INCLUDE_DIRS}
+	${JPEG_INCLUDE_DIR}
+	${PNG_INCLUDE_DIRS}
 	${SDL2_INCLUDE_DIRS}
 	${PLAT_INCLUDES}
 )
