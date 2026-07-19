@@ -2887,7 +2887,9 @@ int SexyAppBase::MsgBox(const std::string& theText, const std::string& theTitle,
 
 	BeginPopup();
 	//int aResult = MessageBoxA(mHWnd, theText.c_str(), theTitle.c_str(), theFlags);
+#ifndef NINTENDO_WII
 	printf("%s\n===\n%s\n", theTitle.c_str(), theText.c_str());
+#endif
 
 #ifdef __SWITCH__
 	ErrorApplicationConfig c;
@@ -2914,7 +2916,9 @@ int SexyAppBase::MsgBox(const std::wstring& theText, const std::wstring& theTitl
 
 	BeginPopup();
 	//int aResult = MessageBoxW(mHWnd, theText.c_str(), theTitle.c_str(), theFlags);
+#ifndef NINTENDO_WII
 	wprintf(L"%s\n===\n%s\n", theTitle.c_str(), theText.c_str());
+#endif
 
 #ifdef __SWITCH__
 	std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
@@ -2937,8 +2941,12 @@ void SexyAppBase::Popup(const std::string& theString)
 	}
 
 	BeginPopup();
+#ifndef NINTENDO_WII
+	// plain printf() with no console/stdio backend configured has been
+	// observed to block indefinitely on Wii (see wii-port branch history)
 	if (!mShutdown)
 		printf("FATAL ERROR\n===\n%s\n", theString.c_str());
+#endif
 
 #ifdef __SWITCH__
 	ErrorApplicationConfig c;
@@ -2958,8 +2966,10 @@ void SexyAppBase::Popup(const std::wstring& theString)
 	}
 
 	BeginPopup();
+#ifndef NINTENDO_WII
 	if (!mShutdown)
 		wprintf(L"FATAL ERROR\n===\n%s\n", theString.c_str());
+#endif
 
 #ifdef __SWITCH__
 	std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
