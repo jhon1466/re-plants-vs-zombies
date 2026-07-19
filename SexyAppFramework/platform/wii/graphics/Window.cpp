@@ -1,5 +1,4 @@
 #include <gccore.h>
-#include <fat.h>
 
 #include "SexyAppBase.h"
 #include "graphics/GLInterface.h"
@@ -14,9 +13,9 @@ void SexyAppBase::MakeWindow()
 {
 	if (mGLInterface == NULL)
 	{
-		// mounts the SD card (sdmc:/) so main.pak/properties can be read; must
-		// happen before anything under Resources.cpp tries to open a file
-		fatInitDefault();
+		// SD card (sdmc:/) is mounted in main.cpp - has to happen before
+		// SexyAppBase::Init() touches it (chdir/AddPakFile), which runs
+		// before MakeWindow() ever does
 
 		mGLInterface = new GLInterface(this);
 		InitGLInterface();
