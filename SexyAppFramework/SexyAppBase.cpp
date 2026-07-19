@@ -5079,18 +5079,13 @@ void SexyAppBase::Init()
 	strcat(aPath, "/savedata/");
 	SetAppDataFolder(aPath);
 
-#ifdef NINTENDO_WII
-	// WII DEBUG: cyan breadcrumb square = chdir/SetAppDataFolder done, about to load main.pak
-	mGLInterface->FillRect(Rect(10, 10, 40, 40), Color(0, 255, 255), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
-#endif
-
 	bool aPakLoaded = gPakInterface->AddPakFile("main.pak");
 
 #ifdef NINTENDO_WII
-	// WII DEBUG: white = main.pak loaded ok, orange = AddPakFile returned false
-	mGLInterface->FillRect(Rect(10, 10, 40, 40), aPakLoaded ? Color(255, 255, 255) : Color(255, 128, 0), Graphics::DRAWMODE_NORMAL);
-	mGLInterface->Redraw();
+	// WII DEBUG: mGLInterface doesn't exist yet at this point (MakeWindow() hasn't
+	// run), so just stash the result - drawn as a breadcrumb once it's safe to.
+	extern bool gWiiDebugPakLoaded;
+	gWiiDebugPakLoaded = aPakLoaded;
 #endif
 
 	// Create a message we can use to talk to ourselves inter-process
@@ -5222,11 +5217,19 @@ void SexyAppBase::Init()
 	*/
 
 	MakeWindow();
-		
+
+#ifdef NINTENDO_WII
+	// WII DEBUG: mGLInterface is guaranteed valid here (MakeWindow() just ran).
+	// white = main.pak loaded ok, orange = AddPakFile("main.pak") returned false
+	extern bool gWiiDebugPakLoaded;
+	mGLInterface->FillRect(Rect(10, 10, 40, 40), gWiiDebugPakLoaded ? Color(255, 255, 255) : Color(255, 128, 0), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
+
 	if (mPlayingDemoBuffer)
 	{
 		// Get video data
-		
+
 		PrepareDemoCommand(true);
 		mDemoNeedsCommand = true;
 		

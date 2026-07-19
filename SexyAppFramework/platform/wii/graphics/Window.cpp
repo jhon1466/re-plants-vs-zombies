@@ -10,6 +10,11 @@
 
 using namespace Sexy;
 
+// WII DEBUG: set by AddPakFile's caller in SexyAppBase.cpp (which runs before
+// MakeWindow(), i.e. before mGLInterface exists) and read back afterwards to
+// draw a breadcrumb once it's actually safe to touch mGLInterface.
+bool gWiiDebugPakLoaded = false;
+
 void SexyAppBase::MakeWindow()
 {
 	if (mGLInterface == NULL)
@@ -20,10 +25,6 @@ void SexyAppBase::MakeWindow()
 
 		mGLInterface = new GLInterface(this);
 		InitGLInterface();
-
-		// WII DEBUG: magenta breadcrumb square = VIDEO/GX init + renderer confirmed alive
-		mGLInterface->FillRect(Rect(10, 10, 40, 40), Color(255, 0, 255), Graphics::DRAWMODE_NORMAL);
-		mGLInterface->Redraw();
 
 		mGLInterface->UpdateViewport();
 		mWidgetManager->Resize(mScreenBounds, mGLInterface->mPresentationRect);

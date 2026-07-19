@@ -30,19 +30,6 @@ jobs:
           cmake .. -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Wii.cmake -DCMAKE_BUILD_TYPE=MinSizeRel
           make
 
-      # TEMPORARY: resolving a crash address reported by Dolphin while
-      # bringing up the Wii port (PC=0x80170c04, invalid read at 0x000000a8).
-      # Remove once the port is stable.
-      - name: Resolve crash address
-        shell: bash
-        run: |
-          source $DEVKITPRO/wiivars.sh
-          cd build
-          echo "=== addr2line -f -C -i 0x80170c04 ==="
-          powerpc-eabi-addr2line -e re-plants-vs-zombies.elf -f -C -i 0x80170c04 || true
-          echo "=== nearest preceding symbol (nm) ==="
-          powerpc-eabi-nm --numeric-sort re-plants-vs-zombies.elf | awk '$1 <= "80170c04" { last = $0 } END { print last }'
-
       - name: Upload .dol artifact
         uses: actions/upload-artifact@v4
         with:
