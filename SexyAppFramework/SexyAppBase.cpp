@@ -5077,7 +5077,18 @@ void SexyAppBase::Init()
 	strcat(aPath, "/savedata/");
 	SetAppDataFolder(aPath);
 
-	gPakInterface->AddPakFile("main.pak");
+#ifdef NINTENDO_WII
+	printf("WII DEBUG: mChangeDirTo='%s'\n", mChangeDirTo.c_str());
+	char aCwd[512];
+	getcwd(aCwd, 512);
+	printf("WII DEBUG: cwd after chdir='%s'\n", aCwd);
+#endif
+
+	bool aPakLoaded = gPakInterface->AddPakFile("main.pak");
+
+#ifdef NINTENDO_WII
+	printf("WII DEBUG: AddPakFile(main.pak) = %d\n", (int)aPakLoaded);
+#endif
 
 	// Create a message we can use to talk to ourselves inter-process
 	//mNotifyGameMessage = RegisterWindowMessage((__S("Notify") + StringToSexyString(mProdName)).c_str());

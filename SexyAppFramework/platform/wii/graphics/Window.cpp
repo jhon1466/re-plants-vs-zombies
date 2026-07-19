@@ -1,5 +1,6 @@
 #include <gccore.h>
 #include <fat.h>
+#include <cstdio>
 
 #include "SexyAppBase.h"
 #include "graphics/GLInterface.h"
@@ -12,12 +13,17 @@ void SexyAppBase::MakeWindow()
 {
 	if (mGLInterface == NULL)
 	{
+		setvbuf(stdout, NULL, _IONBF, 0); // WII DEBUG: make printf visible immediately in Dolphin's log
+
 		// mounts the SD card (sdmc:/) so main.pak/properties can be read; must
 		// happen before anything under Resources.cpp tries to open a file
-		fatInitDefault();
+		bool aFatOk = fatInitDefault();
+		printf("WII DEBUG: fatInitDefault() = %d\n", (int)aFatOk);
 
 		mGLInterface = new GLInterface(this);
+		printf("WII DEBUG: GLInterface constructed\n");
 		InitGLInterface();
+		printf("WII DEBUG: InitGLInterface() done\n");
 
 		mGLInterface->UpdateViewport();
 		mWidgetManager->Resize(mScreenBounds, mGLInterface->mPresentationRect);
