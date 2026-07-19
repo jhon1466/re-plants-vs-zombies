@@ -1136,8 +1136,7 @@ bool TodResourceManager::TodLoadNextResource()
 
 #ifdef NINTENDO_WII
 	++gWiiDebugResourceLoopCount;
-	if ((gWiiDebugResourceLoopCount % 10) == 0)
-		WiiDebugRedraw();
+	WiiDebugRedraw();
 #endif
 
 	while (mCurResGroupListItr != mCurResGroupList->end())

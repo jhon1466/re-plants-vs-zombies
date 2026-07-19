@@ -21,6 +21,11 @@ static void DrawState()
 
 	GLInterface* aGL = anApp->mGLInterface;
 
+	// WII DEBUG VERIFY MARKER - big white square, top-right corner. Only
+	// exists in this exact build; if you don't see this, you're looking at
+	// an old cached .dol, not the one just built.
+	aGL->FillRect(Rect(340, 10, 50, 50), Color(255, 255, 255), Graphics::DRAWMODE_NORMAL);
+
 	// Top row: AddPakFile("main.pak") progress 0-9 (see PakInterface.cpp for
 	// what each step means; full green bar = pak loaded successfully)
 	aGL->FillRect(Rect(10, 10, 9 * 20, 20), Color(64, 64, 64), Graphics::DRAWMODE_NORMAL);
