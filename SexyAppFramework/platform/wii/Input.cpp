@@ -6,6 +6,8 @@
 #include "SexyAppBase.h"
 #include "graphics/GLInterface.h"
 #include "graphics/GLImage.h"
+#include "graphics/Graphics.h"
+#include "graphics/Color.h"
 #include "widget/WidgetManager.h"
 
 using namespace Sexy;
@@ -57,8 +59,29 @@ void SexyAppBase::StopTextInput()
 
 bool SexyAppBase::ProcessDeferredMessages(bool singleMessage)
 {
+#ifdef NINTENDO_WII
+	// WII DEBUG: row 5, yellow, sub-steps - only drawn on the very first call
+	// (this runs every frame), to see if WPAD/PAD polling is what hangs
+	static bool sWiiDebugFirstCall = true;
+	bool aIsFirstCall = sWiiDebugFirstCall;
+	if (aIsFirstCall)
+	{
+		sWiiDebugFirstCall = false;
+		mGLInterface->FillRect(Rect(10, 140, 1 * 20, 20), Color(255, 255, 0), Graphics::DRAWMODE_NORMAL);
+		mGLInterface->Redraw();
+	}
+#endif
+
 	WPAD_ScanPads();
 	PAD_ScanPads();
+
+#ifdef NINTENDO_WII
+	if (aIsFirstCall)
+	{
+		mGLInterface->FillRect(Rect(10, 140, 2 * 20, 20), Color(255, 255, 0), Graphics::DRAWMODE_NORMAL);
+		mGLInterface->Redraw();
+	}
+#endif
 
 	u32 wpadDown = WPAD_ButtonsDown(WPAD_CHAN_0);
 	u32 wpadUp = WPAD_ButtonsUp(WPAD_CHAN_0);
@@ -99,6 +122,14 @@ bool SexyAppBase::ProcessDeferredMessages(bool singleMessage)
 	ir_t ir;
 	WPAD_IR(WPAD_CHAN_0, &ir);
 
+#ifdef NINTENDO_WII
+	if (aIsFirstCall)
+	{
+		mGLInterface->FillRect(Rect(10, 140, 3 * 20, 20), Color(255, 255, 0), Graphics::DRAWMODE_NORMAL);
+		mGLInterface->Redraw();
+	}
+#endif
+
 	if (ir.valid)
 	{
 		mLastUserInputTick = mLastTimerTime;
@@ -118,6 +149,14 @@ bool SexyAppBase::ProcessDeferredMessages(bool singleMessage)
 		mWidgetManager->MouseUp(x, y, 1);
 
 	prevPointerDown = pointerDown;
+
+#ifdef NINTENDO_WII
+	if (aIsFirstCall)
+	{
+		mGLInterface->FillRect(Rect(10, 140, 4 * 20, 20), Color(255, 255, 0), Graphics::DRAWMODE_NORMAL);
+		mGLInterface->Redraw();
+	}
+#endif
 
 	return false;
 }

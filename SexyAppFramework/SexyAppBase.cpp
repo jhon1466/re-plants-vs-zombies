@@ -4461,6 +4461,17 @@ bool SexyAppBase::Process(bool allowSleep)
 
 void SexyAppBase::DoMainLoop()
 {
+#ifdef NINTENDO_WII
+	// WII DEBUG: row 4, orange - fires once, first time DoMainLoop actually runs
+	static bool sWiiDebugFirstLoop = true;
+	if (sWiiDebugFirstLoop)
+	{
+		sWiiDebugFirstLoop = false;
+		mGLInterface->FillRect(Rect(10, 110, 20, 20), Color(255, 165, 0), Graphics::DRAWMODE_NORMAL);
+		mGLInterface->Redraw();
+	}
+#endif
+
 	while (!mShutdown)
 	{
 		if (mExitToTop)
@@ -4576,10 +4587,24 @@ void SexyAppBase::Start()
 	if (mShutdown)
 		return;
 
+#ifdef NINTENDO_WII
+	// WII DEBUG: third row, purple - Start() entered
+	mGLInterface->FillRect(Rect(10, 80, 1 * 20, 20), Color(200, 0, 255), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
+
 	StartCursorThread();
 
 	if (mAutoStartLoadingThread)
 		StartLoadingThread();
+
+#ifdef NINTENDO_WII
+	// mAutoStartLoadingThread spawns a real pthread (LoadingThreadProcStub) -
+	// if that thread (or something it depends on) hangs, we'd still reach
+	// here fine since pthread_create() only blocks until the thread launches
+	mGLInterface->FillRect(Rect(10, 80, 2 * 20, 20), Color(200, 0, 255), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
 
 	//::ShowWindow(mHWnd, SW_SHOW);
 	//::SetFocus(mHWnd);
@@ -4595,6 +4620,12 @@ void SexyAppBase::Start()
 	mLastTime = aStartTime;
 	mLastUserInputTick = aStartTime;
 	mLastTimerTime = aStartTime;
+
+#ifdef NINTENDO_WII
+	// about to enter the real per-frame game loop
+	mGLInterface->FillRect(Rect(10, 80, 3 * 20, 20), Color(200, 0, 255), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
 
 	DoMainLoop();
 	ProcessSafeDeleteList();
@@ -5251,9 +5282,27 @@ void SexyAppBase::Init()
 		SetCursor(CURSOR_NONE);
 	}
 
+#ifdef NINTENDO_WII
+	// WII DEBUG: second row, blue - tracks how far past Init() we get, since
+	// AddPakFile failing fast (see the row above) rules out the hang being
+	// inside pak loading itself; something later is what's actually stuck.
+	mGLInterface->FillRect(Rect(10, 50, 1 * 20, 20), Color(0, 128, 255), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
+
 	InitHook();
 
+#ifdef NINTENDO_WII
+	mGLInterface->FillRect(Rect(10, 50, 2 * 20, 20), Color(0, 128, 255), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
+
 	InitInput();
+
+#ifdef NINTENDO_WII
+	mGLInterface->FillRect(Rect(10, 50, 3 * 20, 20), Color(0, 128, 255), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
 
 	mInitialized = true;
 }
