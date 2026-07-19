@@ -5079,14 +5079,7 @@ void SexyAppBase::Init()
 	strcat(aPath, "/savedata/");
 	SetAppDataFolder(aPath);
 
-	bool aPakLoaded = gPakInterface->AddPakFile("main.pak");
-
-#ifdef NINTENDO_WII
-	// WII DEBUG: mGLInterface doesn't exist yet at this point (MakeWindow() hasn't
-	// run), so just stash the result - drawn as a breadcrumb once it's safe to.
-	extern bool gWiiDebugPakLoaded;
-	gWiiDebugPakLoaded = aPakLoaded;
-#endif
+	gPakInterface->AddPakFile("main.pak"); // WII DEBUG: progress recorded in ::gWiiDebugPakStep (see PakInterface.cpp)
 
 	// Create a message we can use to talk to ourselves inter-process
 	//mNotifyGameMessage = RegisterWindowMessage((__S("Notify") + StringToSexyString(mProdName)).c_str());
@@ -5220,9 +5213,13 @@ void SexyAppBase::Init()
 
 #ifdef NINTENDO_WII
 	// WII DEBUG: mGLInterface is guaranteed valid here (MakeWindow() just ran).
-	// white = main.pak loaded ok, orange = AddPakFile("main.pak") returned false
-	extern bool gWiiDebugPakLoaded;
-	mGLInterface->FillRect(Rect(10, 10, 40, 40), gWiiDebugPakLoaded ? Color(255, 255, 255) : Color(255, 128, 0), Graphics::DRAWMODE_NORMAL);
+	// Dark gray bar = full 0-9 scale; green fill width = 20px per step
+	// AddPakFile("main.pak") actually reached (see PakInterface.h/.cpp for
+	// what each step number means - step 9 = fully succeeded). ::-qualified
+	// since this file does "using namespace Sexy;" and the variable lives in
+	// the global namespace (declared in PakInterface.h, which is included above).
+	mGLInterface->FillRect(Rect(10, 10, 9 * 20, 30), Color(64, 64, 64), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->FillRect(Rect(10, 10, ::gWiiDebugPakStep * 20, 30), Color(0, 255, 0), Graphics::DRAWMODE_NORMAL);
 	mGLInterface->Redraw();
 #endif
 

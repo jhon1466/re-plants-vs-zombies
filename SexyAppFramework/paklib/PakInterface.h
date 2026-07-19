@@ -8,6 +8,11 @@
 
 #ifdef NINTENDO_WII
 #include "platform/wii/Mem2Alloc.h"
+
+// WII DEBUG: how far AddPakFile() got before failing/returning, in the
+// global namespace matching this whole header - reference as ::gWiiDebugPakStep
+// from files that do "using namespace Sexy;" to avoid ambient-lookup surprises.
+extern int gWiiDebugPakStep;
 #endif
 
 class PakCollection;

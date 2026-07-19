@@ -96,8 +96,19 @@ static void FixFileName(const char* theFileName, char* theUpperName)
 	}
 }
 
+#ifdef NINTENDO_WII
+// WII DEBUG: definition for the ::gWiiDebugPakStep declared in PakInterface.h
+// 0=not started 1=file opened 2=size read 3=mem allocated 4=fread ok
+// 5=xor-decoded 6=second FOpen ok 7=magic ok 8=version ok 9=loop finished
+int gWiiDebugPakStep = 0;
+#define WII_PAK_STEP(n) (gWiiDebugPakStep = (n))
+#else
+#define WII_PAK_STEP(n)
+#endif
+
 bool PakInterface::AddPakFile(const std::string& theFileName)
 {
+	WII_PAK_STEP(0);
 	/*
 	HANDLE aFileHandle = CreateFile(theFileName.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 
@@ -124,10 +135,12 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 
 	FILE *aFileHandle = fcaseopen(theFileName.c_str(), "rb");
     if (!aFileHandle) return false;
+	WII_PAK_STEP(1);
 
     fseek(aFileHandle, 0, SEEK_END);
     size_t aFileSize = ftell(aFileHandle);
     fseek(aFileHandle, 0, SEEK_SET);
+	WII_PAK_STEP(2);
 
 	mPakCollectionList.emplace_back(aFileSize);
 	PakCollection* aPakCollection = &mPakCollectionList.back();
@@ -137,17 +150,26 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 	aPakCollection->mDataPtr = aPtr;
 	*/
 
+	if (aPakCollection->mDataPtr == NULL)
+	{
+		fclose(aFileHandle);
+		return false;
+	}
+	WII_PAK_STEP(3);
+
 	if (fread(aPakCollection->mDataPtr, 1, aFileSize, aFileHandle) != aFileSize) {
         fclose(aFileHandle);
         return false;
     }
     fclose(aFileHandle);
+	WII_PAK_STEP(4);
 
     {
         auto *aDataPtr = static_cast<uint8_t *>(aPakCollection->mDataPtr);
         for (size_t i = 0; i < aFileSize; i++)
             *aDataPtr++ ^= 0xF7;
     }
+	WII_PAK_STEP(5);
 
 	PakRecordMap::iterator aRecordItr = mPakRecordMap.insert(PakRecordMap::value_type(StringToUpper(theFileName), PakRecord())).first;
 	PakRecord* aPakRecord = &(aRecordItr->second);
@@ -155,10 +177,11 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 	aPakRecord->mFileName = theFileName;
 	aPakRecord->mStartPos = 0;
 	aPakRecord->mSize = aFileSize;
-	
+
 	PFILE* aFP = FOpen(theFileName.c_str(), "rb");
 	if (aFP == NULL)
 		return false;
+	WII_PAK_STEP(6);
 
 	uint32_t aMagic = 0;
 	FRead(&aMagic, sizeof(uint32_t), 1, aFP);
@@ -168,6 +191,7 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 		FClose(aFP);
 		return false;
 	}
+	WII_PAK_STEP(7);
 
 	uint32_t aVersion = 0;
 	FRead(&aVersion, sizeof(uint32_t), 1, aFP);
@@ -177,6 +201,7 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 		FClose(aFP);
 		return false;
 	}
+	WII_PAK_STEP(8);
 
 	int aPos = 0;
 
@@ -232,6 +257,7 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 	}
 
 	FClose(aFP);
+	WII_PAK_STEP(9);
 
 	return true;
 }

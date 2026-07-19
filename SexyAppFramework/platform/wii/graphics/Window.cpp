@@ -10,14 +10,6 @@
 
 using namespace Sexy;
 
-namespace Sexy
-{
-// WII DEBUG: set by AddPakFile's caller in SexyAppBase.cpp (which runs before
-// MakeWindow(), i.e. before mGLInterface exists) and read back afterwards to
-// draw a breadcrumb once it's actually safe to touch mGLInterface.
-bool gWiiDebugPakLoaded = false;
-}
-
 void SexyAppBase::MakeWindow()
 {
 	if (mGLInterface == NULL)
