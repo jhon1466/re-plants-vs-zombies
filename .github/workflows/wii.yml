@@ -9,11 +9,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install portlibs
-        shell: bash
-        run: |
-          source $DEVKITPRO/wiivars.sh
-          yes | dkp-pacman -S wii-sdl2 ppc-zlib ppc-libjpeg-turbo ppc-libpng ppc-libogg ppc-libvorbis ppc-mpg123
+      # wii-sdl2/ppc-zlib/ppc-libjpeg-turbo/ppc-libpng/ppc-libogg/ppc-libvorbis/ppc-mpg123
+      # already ship preinstalled in the devkitpro/devkitppc image (same situation the
+      # Switch workflow hit - see "take 4: it's all preinstalled" in git history)
 
       - name: Compile libopenmpt for Wii
         shell: bash
