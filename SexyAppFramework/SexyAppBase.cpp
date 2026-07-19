@@ -180,7 +180,10 @@ SexyAppBase::SexyAppBase()
 #elifdef __3DS__
 	mChangeDirTo = "sdmc:/3ds/PlantsvsZombies/";
 #elifdef NINTENDO_WII
-	mChangeDirTo = "sdmc:/apps/PlantsvsZombies/";
+	// libfat on Wii mounts the SD card as "sd:/" - "sdmc:/" is the
+	// Switch/3DS device name and does NOT exist here, so chdir would
+	// silently fail and every relative fopen would miss the game data
+	mChangeDirTo = "sd:/apps/PlantsvsZombies/";
 #else
 	mChangeDirTo = "./";
 #endif
