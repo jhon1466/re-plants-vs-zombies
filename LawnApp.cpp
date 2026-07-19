@@ -1273,16 +1273,37 @@ void LawnApp::Init()
 	TodLog("session id: %u", mSessionID);
 //#endif
 
+#ifdef NINTENDO_WII
+	// WII DEBUG: row 6, teal - SexyApp::Init() (SexyAppBase's boot sequence)
+	// returned; LawnApp's own init (resources.xml, TodLoadResources) is next
+	mGLInterface->FillRect(Rect(10, 170, 1 * 20, 20), Color(0, 255, 200), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
+
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
 	{
 		ShowResourceError(true);
 		return;
 	}
 
+#ifdef NINTENDO_WII
+	// ParseResourcesFile("properties/resources.xml") succeeded
+	mGLInterface->FillRect(Rect(10, 170, 2 * 20, 20), Color(0, 255, 200), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
+
 	if (!TodLoadResources("Init"))
 	{
 		return;
 	}
+
+#ifdef NINTENDO_WII
+	// TodLoadResources("Init") succeeded - this is the one most likely to
+	// hang, since it presumably pulls fonts/images out of main.pak, which
+	// never actually loaded (AddPakFile stuck at step 0 - see the top row)
+	mGLInterface->FillRect(Rect(10, 170, 3 * 20, 20), Color(0, 255, 200), Graphics::DRAWMODE_NORMAL);
+	mGLInterface->Redraw();
+#endif
 
 	PerfTimer mTimer;
 	mTimer.Start();
