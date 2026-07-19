@@ -177,6 +177,8 @@ SexyAppBase::SexyAppBase()
 	mChangeDirTo = "sdmc:/switch/PlantsvsZombies/";
 #elifdef __3DS__
 	mChangeDirTo = "sdmc:/3ds/PlantsvsZombies/";
+#elifdef NINTENDO_WII
+	mChangeDirTo = "sdmc:/apps/PlantsvsZombies/";
 #else
 	mChangeDirTo = "./";
 #endif
