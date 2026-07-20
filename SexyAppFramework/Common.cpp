@@ -212,15 +212,43 @@ std::wstring Sexy::StringToLower(const std::wstring& theString)
 
 std::wstring Sexy::StringToWString(const std::string &theString)
 {
-	std::wstring aString;
-	aString.reserve(theString.length());
-	for(size_t i = 0; i < theString.length(); ++i)
-		aString += (unsigned char)theString[i];
-	return aString;
+	// Text loaded from game files (LawnStrings.txt, XML) is UTF-8. Widening
+	// byte-by-byte here used to split every multi-byte UTF-8 sequence into
+	// its raw bytes as separate wchar_ts (e.g. U+00A1 '¡' -> U+00C2 'Â' +
+	// U+00A1 '¡'), which is why accented/punctuation characters rendered as
+	// mojibake. Decode it properly; fall back to the old byte-widening only
+	// if the input isn't valid UTF-8, so non-text callers keep working.
+	try
+	{
+		std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
+		return cv.from_bytes(theString);
+	}
+	catch (const std::range_error&)
+	{
+		std::wstring aString;
+		aString.reserve(theString.length());
+		for(size_t i = 0; i < theString.length(); ++i)
+			aString += (unsigned char)theString[i];
+		return aString;
+	}
 }
 
 std::string Sexy::WStringToString(const std::wstring &theString)
 {
+	// Mirror of StringToWString's fix: encode as UTF-8 rather than through
+	// wcstombs, which depends on the current locale (not guaranteed to be
+	// UTF-8, and not what the rest of the game's text files/rendering
+	// assume) and would otherwise re-introduce the same mojibake on the
+	// way back out (e.g. saving/reloading accented profile names).
+	try
+	{
+		std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
+		return cv.to_bytes(theString);
+	}
+	catch (const std::range_error&)
+	{
+	}
+
 	size_t aRequiredLength = wcstombs( NULL, theString.c_str(), 0 );
 	if (aRequiredLength < 16384)
 	{
