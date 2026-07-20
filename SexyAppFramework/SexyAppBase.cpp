@@ -2956,9 +2956,8 @@ int SexyAppBase::MsgBox(const std::wstring& theText, const std::wstring& theTitl
 #endif
 
 #ifdef __SWITCH__
-	std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
 	ErrorApplicationConfig c;
-	errorApplicationCreate(&c, cv.to_bytes(theTitle).c_str(), cv.to_bytes(theText).c_str());
+	errorApplicationCreate(&c, WStringToUtf8(theTitle).c_str(), WStringToUtf8(theText).c_str());
 	errorApplicationShow(&c);
 #endif
 
@@ -3007,9 +3006,8 @@ void SexyAppBase::Popup(const std::wstring& theString)
 #endif
 
 #ifdef __SWITCH__
-	std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
 	ErrorApplicationConfig c;
-	errorApplicationCreate(&c, "Fatal error", cv.to_bytes(theString).c_str());
+	errorApplicationCreate(&c, "Fatal error", WStringToUtf8(theString).c_str());
 	errorApplicationShow(&c);
 #endif
 

@@ -192,6 +192,13 @@ std::string			GetFullPath(const std::string& theRelPath);
 std::string			GetPathFrom(const std::string& theRelPath, const std::string& theDir);
 bool				AllowAllAccess(const std::string& theFileName);
 std::wstring		UTF8StringToWString(const std::string theString);
+// Manual UTF-8 <-> wchar_t codepoint conversion. Avoids std::wstring_convert/
+// std::codecvt_utf8 (deprecated, and pulls in locale-facet machinery that's
+// been observed to emit a system-register read Ryujinx's CPU JIT doesn't
+// implement - real hardware wasn't confirmed affected, but there's no
+// reason to depend on that heavier path for plain UTF-8 conversion anyway).
+std::wstring		Utf8ToWString(const std::string& theString);
+std::string			WStringToUtf8(const std::wstring& theString);
 
 // Read memory and then move the pointer
 void				SMemR(void*& _Src, void* _Dst, size_t _Size);

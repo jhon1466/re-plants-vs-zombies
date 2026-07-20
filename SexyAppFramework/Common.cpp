@@ -210,27 +210,109 @@ std::wstring Sexy::StringToLower(const std::wstring& theString)
 	return aString;
 }
 
+std::wstring Sexy::Utf8ToWString(const std::string &theString)
+{
+	std::wstring aResult;
+	aResult.reserve(theString.size());
+
+	size_t aLen = theString.size();
+	size_t i = 0;
+	while (i < aLen)
+	{
+		unsigned char c = (unsigned char)theString[i];
+		uint32_t aCodepoint;
+		size_t anExtraBytes;
+
+		if (c < 0x80) { aCodepoint = c; anExtraBytes = 0; }
+		else if ((c & 0xE0) == 0xC0) { aCodepoint = c & 0x1F; anExtraBytes = 1; }
+		else if ((c & 0xF0) == 0xE0) { aCodepoint = c & 0x0F; anExtraBytes = 2; }
+		else if ((c & 0xF8) == 0xF0) { aCodepoint = c & 0x07; anExtraBytes = 3; }
+		else
+		{
+			// Not a valid UTF-8 lead byte - pass it through raw rather than
+			// throwing, so non-UTF-8 (or already-decoded) input still works.
+			aResult += (wchar_t)c;
+			i++;
+			continue;
+		}
+
+		if (i + anExtraBytes >= aLen)
+		{
+			aResult += (wchar_t)c;
+			i++;
+			continue;
+		}
+
+		bool isValid = true;
+		uint32_t aCp = aCodepoint;
+		for (size_t j = 1; j <= anExtraBytes; j++)
+		{
+			unsigned char aCont = (unsigned char)theString[i + j];
+			if ((aCont & 0xC0) != 0x80)
+			{
+				isValid = false;
+				break;
+			}
+			aCp = (aCp << 6) | (aCont & 0x3F);
+		}
+
+		if (!isValid)
+		{
+			aResult += (wchar_t)c;
+			i++;
+			continue;
+		}
+
+		aResult += (wchar_t)aCp;
+		i += anExtraBytes + 1;
+	}
+
+	return aResult;
+}
+
+std::string Sexy::WStringToUtf8(const std::wstring &theString)
+{
+	std::string aResult;
+	aResult.reserve(theString.size());
+
+	for (wchar_t aWideChar : theString)
+	{
+		uint32_t aCp = (uint32_t)aWideChar;
+		if (aCp < 0x80)
+		{
+			aResult += (char)aCp;
+		}
+		else if (aCp < 0x800)
+		{
+			aResult += (char)(0xC0 | (aCp >> 6));
+			aResult += (char)(0x80 | (aCp & 0x3F));
+		}
+		else if (aCp < 0x10000)
+		{
+			aResult += (char)(0xE0 | (aCp >> 12));
+			aResult += (char)(0x80 | ((aCp >> 6) & 0x3F));
+			aResult += (char)(0x80 | (aCp & 0x3F));
+		}
+		else
+		{
+			aResult += (char)(0xF0 | (aCp >> 18));
+			aResult += (char)(0x80 | ((aCp >> 12) & 0x3F));
+			aResult += (char)(0x80 | ((aCp >> 6) & 0x3F));
+			aResult += (char)(0x80 | (aCp & 0x3F));
+		}
+	}
+
+	return aResult;
+}
+
 std::wstring Sexy::StringToWString(const std::string &theString)
 {
 	// Text loaded from game files (LawnStrings.txt, XML) is UTF-8. Widening
 	// byte-by-byte here used to split every multi-byte UTF-8 sequence into
 	// its raw bytes as separate wchar_ts (e.g. U+00A1 '¡' -> U+00C2 'Â' +
 	// U+00A1 '¡'), which is why accented/punctuation characters rendered as
-	// mojibake. Decode it properly; fall back to the old byte-widening only
-	// if the input isn't valid UTF-8, so non-text callers keep working.
-	try
-	{
-		std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
-		return cv.from_bytes(theString);
-	}
-	catch (const std::range_error&)
-	{
-		std::wstring aString;
-		aString.reserve(theString.length());
-		for(size_t i = 0; i < theString.length(); ++i)
-			aString += (unsigned char)theString[i];
-		return aString;
-	}
+	// mojibake. Decode it properly via Utf8ToWString instead.
+	return Utf8ToWString(theString);
 }
 
 std::string Sexy::WStringToString(const std::wstring &theString)
@@ -240,33 +322,7 @@ std::string Sexy::WStringToString(const std::wstring &theString)
 	// UTF-8, and not what the rest of the game's text files/rendering
 	// assume) and would otherwise re-introduce the same mojibake on the
 	// way back out (e.g. saving/reloading accented profile names).
-	try
-	{
-		std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
-		return cv.to_bytes(theString);
-	}
-	catch (const std::range_error&)
-	{
-	}
-
-	size_t aRequiredLength = wcstombs( NULL, theString.c_str(), 0 );
-	if (aRequiredLength < 16384)
-	{
-		char aBuffer[16384];
-		wcstombs( aBuffer, theString.c_str(), 16384 );
-		return std::string(aBuffer);
-	}
-	else
-	{
-		DBG_ASSERTE(aRequiredLength != (size_t)-1);
-		if (aRequiredLength == (size_t)-1) return "";
-
-		char* aBuffer = new char[aRequiredLength+1];
-		wcstombs( aBuffer, theString.c_str(), aRequiredLength+1 );
-		std::string aStr = aBuffer;
-		delete[] aBuffer;
-		return aStr;
-	}
+	return WStringToUtf8(theString);
 }
 
 SexyString Sexy::StringToSexyString(const std::string& theString)
@@ -1422,8 +1478,7 @@ bool Sexy::StrPrefixNoCase(const char *theStr, const char *thePrefix, int maxLen
 
 std::wstring Sexy::UTF8StringToWString(const std::string theString)
 {
-	std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
-	return cv.from_bytes(theString);
+	return Utf8ToWString(theString);
 	/*
 	int size = MultiByteToWideChar(CP_UTF8, 0, theString.c_str(), theString.length() + 1, nullptr, 0);
 	wchar_t* buffer = new wchar_t[size];
