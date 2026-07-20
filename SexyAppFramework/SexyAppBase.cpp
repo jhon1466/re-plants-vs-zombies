@@ -2771,6 +2771,24 @@ bool SexyAppBase::DrawDirtyStuff()
 	}
 #endif
 
+#ifdef NINTENDO_WII
+	// Always-on-top live indicator (drawn on the main thread, after the
+	// widget tree - so it survives full-screen fills like TitleScreen's
+	// logo states) showing whether TodResourceManager::TodLoadNextResource
+	// is still advancing. If this bar is frozen while the logo is stuck,
+	// the background loading thread - not the logo's own timer - is what's
+	// actually hung.
+	{
+		int aTicks = (::gWiiDebugResourceLoopCount % 380);
+		Graphics g(mGLInterface->GetScreenImage());
+		g.SetColor(Color(40, 40, 40));
+		g.FillRect(Rect(10, 5, 380, 6));
+		g.SetColor(Color(128, 255, 128));
+		g.FillRect(Rect(10, 5, aTicks, 6));
+		drewScreen = true;
+	}
+#endif
+
 	if ((drewScreen || (aStartTime - mLastDrawTick >= 1000) || (mCustomCursorDirty)) &&
 		((int) (aStartTime - mNextDrawTick) >= 0))
 	{
