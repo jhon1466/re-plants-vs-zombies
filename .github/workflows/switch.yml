@@ -9,22 +9,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # libopenmpt doesn't change between our iterations on this branch, and
+      # rebuilding it from source is most of this workflow's runtime - cache
+      # the installed lib/headers so only real source changes trigger it again
+      - name: Cache libopenmpt for Switch
+        id: openmpt-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /opt/devkitpro/portlibs/switch/lib/libopenmpt.a
+            /opt/devkitpro/portlibs/switch/include/libopenmpt
+          key: switch-openmpt-v1
+
       - name: Compile libopenmpt for Switch
+        if: steps.openmpt-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           source $DEVKITPRO/switchvars.sh
           git clone https://github.com/OpenMPT/openmpt
           cd openmpt
-          make CONFIG=gcc SHARED_LIB=0 DYNLINK=0 EXAMPLES=0 OPENMPT123=0 TEST=0 PREFIX=$PORTLIBS_PREFIX install 
+          make CONFIG=gcc SHARED_LIB=0 DYNLINK=0 EXAMPLES=0 OPENMPT123=0 TEST=0 PREFIX=$PORTLIBS_PREFIX install
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: /root/.ccache
+          key: switch-ccache-${{ github.sha }}
+          restore-keys: |
+            switch-ccache-
 
       - name: Run CMake and compile
         shell: bash
         run: |
           source $DEVKITPRO/switchvars.sh
+          which ccache >/dev/null 2>&1 || (apt-get update && apt-get install -y ccache)
+          export CCACHE_DIR=/root/.ccache
+          export CCACHE_MAXSIZE=500M
           mkdir build
           cd build
-          aarch64-none-elf-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O1
+          aarch64-none-elf-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O1 \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           make
+          ccache -s || true
 
       - name: Upload .nro artifact
         uses: actions/upload-artifact@v4
