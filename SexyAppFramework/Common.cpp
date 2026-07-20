@@ -317,12 +317,19 @@ std::wstring Sexy::StringToWString(const std::string &theString)
 
 std::string Sexy::WStringToString(const std::wstring &theString)
 {
-	// Mirror of StringToWString's fix: encode as UTF-8 rather than through
-	// wcstombs, which depends on the current locale (not guaranteed to be
-	// UTF-8, and not what the rest of the game's text files/rendering
-	// assume) and would otherwise re-introduce the same mojibake on the
-	// way back out (e.g. saving/reloading accented profile names).
-	return WStringToUtf8(theString);
+	// NOT UTF-8 here: this feeds SexyString, which ImageFont::DrawStringEx
+	// (and the rest of the font/glyph pipeline - mCharData is a 256-entry
+	// table) indexes one byte per on-screen character. Encoding as UTF-8
+	// would re-split accented characters into two glyphs on the way out,
+	// same as the original bug just moved to the opposite direction. Emit
+	// one byte per codepoint (Latin-1, which covers the accented Spanish
+	// characters these strings actually use) to match what the renderer
+	// expects.
+	std::string aResult;
+	aResult.reserve(theString.size());
+	for (wchar_t aWideChar : theString)
+		aResult += (char)(unsigned char)(uint32_t)aWideChar;
+	return aResult;
 }
 
 SexyString Sexy::StringToSexyString(const std::string& theString)
