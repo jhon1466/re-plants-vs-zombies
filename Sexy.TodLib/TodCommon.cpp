@@ -1080,7 +1080,20 @@ bool TodResourceManager::TodLoadResources(const std::string& theGroup)
 	aTimer.Start();
 
 	StartLoadResources(theGroup);
+#ifdef NINTENDO_SWITCH
+	// This runs on the background loading thread (see
+	// SexyAppBase::StartLoadingThread's pthread_create), which never has
+	// the EGL context current - drawing from here is a silent no-op. Just
+	// update shared counters; the main thread's own draw loop (which does
+	// have the context) reads these to render a bar. See
+	// LawnApp::DrawSwitchLoadBar / its call site for the actual drawing.
+	gSwitchLoadBarTotal = GetNumResources(theGroup);
+	gSwitchLoadBarLoaded = 0;
+	while (!gSexyAppBase->mShutdown && TodLoadNextResource())
+		gSwitchLoadBarLoaded++;
+#else
 	while (!gSexyAppBase->mShutdown && TodLoadNextResource());
+#endif
 	if (gSexyAppBase->mShutdown)
 		return false;
 

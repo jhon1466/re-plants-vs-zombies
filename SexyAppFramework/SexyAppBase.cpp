@@ -18,6 +18,13 @@
 #include <3ds.h>
 #endif
 
+#ifdef NINTENDO_SWITCH
+// Defined in LawnApp.cpp; written from the background loading thread,
+// read here on the main thread to draw a loading bar (see DrawDirtyStuff).
+extern int gSwitchLoadBarTotal;
+extern int gSwitchLoadBarLoaded;
+#endif
+
 #include "SexyAppBase.h"
 //#include "misc/SEHCatcher.h"
 #include "widget/WidgetManager.h"
@@ -2742,6 +2749,27 @@ bool SexyAppBase::DrawDirtyStuff()
 	mIsDrawing = true;
 	bool drewScreen = mWidgetManager->DrawScreen();
 	mIsDrawing = false;
+
+#ifdef NINTENDO_SWITCH
+	// The background loading thread (see TodResourceManager::
+	// TodLoadResources / LawnApp::LoadGroup) can't touch GL itself - it
+	// never has the EGL context current on its own thread. It just updates
+	// gSwitchLoadBarTotal/gSwitchLoadBarLoaded; draw the actual bar here,
+	// on the main thread, into the same frame that's about to be presented.
+	if (gSwitchLoadBarTotal > 0 && gSwitchLoadBarLoaded < gSwitchLoadBarTotal)
+	{
+		float aPct = (float)gSwitchLoadBarLoaded / (float)gSwitchLoadBarTotal;
+		if (aPct > 1.0f)
+			aPct = 1.0f;
+		const int aBarX = 250, aBarY = 560, aBarWidth = 300, aBarHeight = 16;
+		Graphics g(mGLInterface->GetScreenImage());
+		g.SetColor(Color(40, 40, 40));
+		g.FillRect(Rect(aBarX, aBarY, aBarWidth, aBarHeight));
+		g.SetColor(Color(80, 200, 80));
+		g.FillRect(Rect(aBarX, aBarY, (int)(aBarWidth * aPct), aBarHeight));
+		drewScreen = true;
+	}
+#endif
 
 	if ((drewScreen || (aStartTime - mLastDrawTick >= 1000) || (mCustomCursorDirty)) &&
 		((int) (aStartTime - mNextDrawTick) >= 0))

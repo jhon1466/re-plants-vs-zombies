@@ -332,5 +332,14 @@ extern bool gSlowMo;  //0x6A9EAA
 extern LawnApp* gLawnApp;  //0x6A9EC0
 extern int gSlowMoCounter;  //0x6A9EC4
 
+#ifdef NINTENDO_SWITCH
+// Written from the background loading thread (TodResourceManager::
+// TodLoadResources / LawnApp::LoadGroup), read from the main thread's own
+// draw loop - see LawnApp::DrawSwitchLoadBar. Plain ints are fine here:
+// worst case is one stale/torn frame of progress, never a crash.
+extern int gSwitchLoadBarTotal;
+extern int gSwitchLoadBarLoaded;
+#endif
+
 
 #endif	// __LAWNAPP_H__
