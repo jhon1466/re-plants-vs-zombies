@@ -444,9 +444,13 @@ Image* GetGIFImage(const std::string& theFileName)
 		bool interlaced;
 
 		p_fread(&pagex, sizeof(short), 1, fp);  // 读取帧的横坐标（Left）
+		pagex = (short)IMG_LE16((unsigned short)pagex);
 		p_fread(&pagey, sizeof(short), 1, fp);  // 读取帧的纵坐标（Top）
+		pagey = (short)IMG_LE16((unsigned short)pagey);
 		p_fread(&width, sizeof(short), 1, fp);  // 读取帧的横向宽度（Width）
+		width = (short)IMG_LE16((unsigned short)width);
 		p_fread(&height, sizeof(short), 1, fp);  // 取得帧的纵向高度（Height）
+		height = (short)IMG_LE16((unsigned short)height);
 		p_fread(&flag, sizeof(char), 1, fp);  // 读取帧标志的压缩字节
 
 		colors = !BitSet(flag, 0x80) ? global_colors : 1 << ((flag & 0x07) + 1);  // 判断使用全局颜色列表或使用局部颜色列表，并取得列表大小
