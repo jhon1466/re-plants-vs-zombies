@@ -15,6 +15,35 @@ extern "C" {
 #include <fat.h>
 #endif
 
+#ifdef __SWITCH__
+#include <switch.h>
+// The default libnx heap init dynamically grabs whatever memory is
+// available, but real hardware appears to hand this homebrew a much
+// tighter pool than what we saw under Ryujinx (heap was already nearly
+// exhausted well before this point in testing). Explicitly request a
+// large fixed heap up front instead of relying on auto-sizing.
+extern "C"
+{
+	u32 __nx_applet_type = AppletType_Application;
+
+	#define INNER_HEAP_SIZE 0x10000000 // 256 MiB
+	size_t nx_inner_heap_size = INNER_HEAP_SIZE;
+	char nx_inner_heap[INNER_HEAP_SIZE];
+
+	void __libnx_initheap(void)
+	{
+		void* addr = nx_inner_heap;
+		size_t size = nx_inner_heap_size;
+
+		extern char* fake_heap_start;
+		extern char* fake_heap_end;
+
+		fake_heap_start = (char*)addr;
+		fake_heap_end = (char*)addr + size;
+	}
+}
+#endif
+
 bool (*gAppCloseRequest)();				//[0x69E6A0]
 bool (*gAppHasUsedCheatKeys)();			//[0x69E6A4]
 SexyString (*gGetCurrentLevelName)();
