@@ -7,6 +7,10 @@
 #include "paklib/PakInterface.h"
 #include "../../Sexy.TodLib/TodDebug.h"
 
+#ifdef __SWITCH__
+#include <malloc.h>
+#endif
+
 extern "C"
 {
 #include "jpeglib.h"
@@ -1199,6 +1203,12 @@ Image* GetJPEGImage(const std::string& theFileName)
 	PFILE *fp;
 
 	TodTraceAndLog("GetJPEGImage: opening '%s'\n", theFileName.c_str());
+#ifdef __SWITCH__
+	{
+		struct mallinfo aMi = mallinfo();
+		TodTraceAndLog("GetJPEGImage: heap arena=%u uordblks(used)=%u fordblks(free)=%u\n", aMi.arena, aMi.uordblks, aMi.fordblks);
+	}
+#endif
 
 	if ((fp = p_fopen(theFileName.c_str(), "rb")) == NULL)
 	{
@@ -1235,7 +1245,9 @@ Image* GetJPEGImage(const std::string& theFileName)
 	unsigned char** buffer = (*cinfo.mem->alloc_sarray)
 		((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
+	TodTraceAndLog("GetJPEGImage: allocating pixel buffer, %u bytes\n", (unsigned int)(cinfo.output_width*cinfo.output_height*sizeof(uint32_t)));
 	uint32_t* aBits = new uint32_t[cinfo.output_width*cinfo.output_height];
+	TodTraceAndLog("GetJPEGImage: pixel buffer allocated at %p\n", (void*)aBits);
 	uint32_t* q = aBits;
 
 	if (cinfo.output_components==1)
@@ -1250,6 +1262,9 @@ Image* GetJPEGImage(const std::string& theFileName)
 				int r = *p++;
 				*q++ = 0xFF000000 | (r << 16) | (r << 8) | (r);
 			}
+
+			if ((cinfo.output_scanline % 100) == 0)
+				TodTraceAndLog("GetJPEGImage: scanline %u/%u\n", cinfo.output_scanline, cinfo.output_height);
 		}
 	}
 	else
@@ -1267,6 +1282,9 @@ Image* GetJPEGImage(const std::string& theFileName)
 
 				*q++ = 0xFF000000 | (r << 16) | (g << 8) | (b);
 			}
+
+			if ((cinfo.output_scanline % 100) == 0)
+				TodTraceAndLog("GetJPEGImage: scanline %u/%u\n", cinfo.output_scanline, cinfo.output_height);
 		}
 	}
 
