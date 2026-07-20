@@ -291,6 +291,21 @@ PFILE* PakInterface::FOpen(const char* theFileName, const char* anAccess)
 		}
 	}
 
+#ifdef NINTENDO_WII
+	// images/, reanim/, particles/ and sounds/ only ever exist packed inside
+	// main.pak for this game - there are no loose files there on the SD
+	// card. ImageLib::GetImage tries up to 4 extensions per image with no
+	// explicit one given, so every miss above falls through to here; on
+	// Wii/Dolphin's libfat, fcaseopen's real directory scan for a path that
+	// can never exist is slow enough (or hangs outright) to look like a
+	// dead boot. Skip straight to failure for these prefixes instead.
+	if (strncasecmp(theFileName, "images/", 7) == 0 ||
+		strncasecmp(theFileName, "reanim/", 7) == 0 ||
+		strncasecmp(theFileName, "particles/", 10) == 0 ||
+		strncasecmp(theFileName, "sounds/", 7) == 0)
+		return NULL;
+#endif
+
 	FILE* aFP = fcaseopen(theFileName, anAccess);
 	if (aFP == NULL)
 		return NULL;
