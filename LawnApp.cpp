@@ -32,6 +32,12 @@
 #include "Sexy.TodLib/EffectSystem.h"
 #include "Sexy.TodLib/FilterEffect.h"
 #include "graphics/Graphics.h"
+#ifdef NINTENDO_WII
+#include "platform/wii/WiiDebug.h"
+#endif
+#ifdef NINTENDO_SWITCH
+#include "graphics/GLInterface.h"
+#endif
 #include "Sexy.TodLib/TodStringFile.h"
 #include "Lawn/Widget/AlmanacDialog.h"
 #include "Lawn/Widget/NewUserDialog.h"
@@ -52,6 +58,11 @@ bool gSlowMo = false;  //0x6A9EAA
 bool gFastMo = false;  //0x6A9EAB
 LawnApp* gLawnApp = nullptr;  //0x6A9EC0
 int gSlowMoCounter = 0;  //0x6A9EC4
+
+#ifdef NINTENDO_SWITCH
+int gSwitchLoadBarTotal = 0;
+int gSwitchLoadBarLoaded = 0;
+#endif
 
 //0x44E8A0
 bool LawnGetCloseRequest()
@@ -1273,16 +1284,40 @@ void LawnApp::Init()
 	TodLog("session id: %u", mSessionID);
 //#endif
 
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(5); // SexyApp::Init() returned; LawnApp's own init next
+#endif
+
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
 	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(13); // ParseResourcesFile returned false
+#endif
 		ShowResourceError(true);
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(7); // ShowResourceError() itself returned (didn't hang)
+#endif
 		return;
 	}
 
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(6); // ParseResourcesFile returned true
+#endif
+
 	if (!TodLoadResources("Init"))
 	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(14); // TodLoadResources("Init") returned false
+#endif
 		return;
 	}
+
+#ifdef NINTENDO_WII
+	// TodLoadResources("Init") succeeded - this is the one most likely to
+	// hang, since it presumably pulls fonts/images out of main.pak, which
+	// never actually loaded (AddPakFile stuck at step 0 - see the top row)
+	WiiDebugCheckpoint(8);
+#endif
 
 	PerfTimer mTimer;
 	mTimer.Start();
@@ -1712,9 +1747,16 @@ void LawnApp::LoadGroup(const char* theGroupName, int theGroupAveMsToLoad)
 	aTimer.Start();
 
 	mResourceManager->StartLoadResources(theGroupName);
+#ifdef NINTENDO_SWITCH
+	gSwitchLoadBarTotal = mResourceManager->GetNumResources(theGroupName);
+	gSwitchLoadBarLoaded = 0;
+#endif
 	while (!mShutdown && !mCloseRequest && !mLoadingFailed && TodLoadNextResource())
 	{
 		mCompletedLoadingThreadTasks += theGroupAveMsToLoad;
+#ifdef NINTENDO_SWITCH
+		gSwitchLoadBarLoaded++;
+#endif
 	}
 
 	if (mShutdown || mCloseRequest)

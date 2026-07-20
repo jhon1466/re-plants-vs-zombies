@@ -55,6 +55,20 @@ elseif(NINTENDO_3DS)
 	list(APPEND PLAT_INCLUDES
 		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/3ds
 	)
+elseif(NINTENDO_WII)
+	set(NO_GLEW ON)
+	set(LOW_MEMORY ON)
+	set(DOWNSCALE_COUNT 2)
+	list(APPEND SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/graphics/Window.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/graphics/GLInterface.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/Input.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/Mem2Alloc.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii/WiiDebug.cpp
+	)
+	list(APPEND PLAT_INCLUDES
+		${CMAKE_CURRENT_SOURCE_DIR}/SexyAppFramework/platform/wii
+	)
 else()
 	set(VORBIS_LIBS vorbisfile vorbis)
 	list(APPEND SOURCES
@@ -91,6 +105,9 @@ add_executable(re-plants-vs-zombies ${SOURCES})
 target_include_directories(re-plants-vs-zombies PRIVATE
 	${PROJECT_SOURCE_DIR}/SexyAppFramework
 	${PROJECT_SOURCE_DIR}/SexyAppFramework/sound/SDL-Mixer-X/include
+	${ZLIB_INCLUDE_DIRS}
+	${JPEG_INCLUDE_DIR}
+	${PNG_INCLUDE_DIRS}
 	${SDL2_INCLUDE_DIRS}
 	${PLAT_INCLUDES}
 )
@@ -116,7 +133,7 @@ elseif (NINTENDO_SWITCH)
 
 	nx_generate_nacp(re-plants-vs-zombies.nacp
 		NAME "Plants vs. Zombies"
-		AUTHOR "PopCap Games, Unofficial Switch port by Headshotnoby"
+		AUTHOR "PopCap Games, Unofficial Switch port by jhon1466"
 		VERSION "0.1"
 	)
 
@@ -130,7 +147,7 @@ elseif (NINTENDO_3DS)
 	ctr_generate_smdh(re-plants-vs-zombies.smdh
 		NAME "Plants vs. Zombies"
 		DESCRIPTION "GOTY Edition"
-		AUTHOR "PopCap Games, Unofficial 3DS port by Headshotnoby"
+		AUTHOR "PopCap Games, Unofficial 3DS port by jhon1466"
 		VERSION "0.1"
 		ICON "${CMAKE_CURRENT_SOURCE_DIR}/icon-3ds.png"
 	)
@@ -138,6 +155,12 @@ elseif (NINTENDO_3DS)
 	ctr_create_3dsx(re-plants-vs-zombies
 		SMDH re-plants-vs-zombies.smdh
 	)
+elseif (NINTENDO_WII)
+	target_compile_definitions(re-plants-vs-zombies PRIVATE NINTENDO_WII)
+	target_link_libraries(re-plants-vs-zombies ogc)
+
+	# produces re-plants-vs-zombies.dol next to the .elf
+	ogc_create_dol(re-plants-vs-zombies)
 else()
 	target_link_libraries(re-plants-vs-zombies GL)
 endif()

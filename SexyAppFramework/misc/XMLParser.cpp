@@ -64,11 +64,16 @@ bool XMLParser::AddAttribute(XMLElement* theElement, const SexyString& theAttrib
 bool XMLParser::GetAsciiChar(wchar_t* theChar, bool* error)
 {
 	(void)error;
-	wchar_t aChar = 0;
-	if (p_fread(&aChar, 1, 1, mFile) != 1)
+	// read into a single byte first, then widen - fread()'ing straight into
+	// a (4-byte) wchar_t only fills its lowest-address byte, which is the
+	// LEAST significant byte on little-endian platforms (works by accident)
+	// but the MOST significant byte on big-endian ones like Wii, turning
+	// every character into (byte << 24) instead of byte
+	unsigned char aByte = 0;
+	if (p_fread(&aByte, 1, 1, mFile) != 1)
 		return false;
 
-	*theChar = aChar;
+	*theChar = (wchar_t)aByte;
 	return true;
 }
 

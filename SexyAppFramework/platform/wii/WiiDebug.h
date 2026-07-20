@@ -1,0 +1,49 @@
+#ifndef __SEXY_WII_DEBUG_H__
+#define __SEXY_WII_DEBUG_H__
+
+// Temporary boot diagnostics for the Wii port. Every checkpoint accumulates
+// into a bitmask and the FULL state (pak-load progress bar + one square per
+// checkpoint reached) is redrawn each time, so the screen always shows the
+// complete history rather than just the last marker. Safe to call before the
+// renderer exists - state is recorded and shows up on the first drawable call.
+void WiiDebugCheckpoint(int theId);
+
+// Redraws the current state without recording a new checkpoint - call
+// periodically from inside a long-running loop to see live progress
+// (e.g. gWiiDebugResourceLoopCount) instead of a static last-known frame.
+void WiiDebugRedraw();
+
+// Draw the final state and spin forever (instead of exit()) so the screen
+// keeps showing how far boot got.
+void WiiDebugHalt();
+
+// Bumped once per TodResourceManager::TodLoadNextResource() call (global
+// namespace - TodCommon.cpp has no "using namespace Sexy;") so we can tell
+// a slow-but-progressing resource load apart from a stuck one.
+extern int gWiiDebugResourceLoopCount;
+
+// Bumped once per outer for(;;) iteration in GetGIFImage's block-skipping
+// loop (ImageLib.cpp, global namespace - that file doesn't have "using
+// namespace Sexy;" either). Distinguishes a genuinely stuck GIF parse from
+// one that's just iterating a very long extension-block chain.
+extern int gWiiDebugGifLoopCount;
+
+// Read-only access to the checkpoint bitmask for the always-on-top overlay
+// (SexyAppBase::DrawDirtyStuff) - once TitleScreen starts drawing full-
+// screen states over everything, the normal DrawState() squares are hidden,
+// but checkpoints 20-25 (DoLoadImage/DoLoadSound/DoLoadFont in-progress vs
+// returned) are exactly what's needed to tell which resource type is stuck
+// in the background loading thread.
+unsigned long long WiiDebugGetCheckpointMask();
+
+// Live (non-sticky, unlike the checkpoint mask) record of whatever resource
+// LoadNextResource is currently in the middle of loading - set right before
+// DoLoadImage/DoLoadSound/DoLoadFont, cleared right after. theType: 0=none,
+// 1=image, 2=sound, 3=font. Copies up to 31 chars of thePath so the
+// always-on-top overlay can show *which* resource is stuck, not just that
+// something is.
+void WiiDebugSetCurrentResource(int theType, const char* thePath);
+extern int gWiiDebugCurrentResType;
+extern char gWiiDebugCurrentResPath[32];
+
+#endif // __SEXY_WII_DEBUG_H__

@@ -3,6 +3,7 @@
 //#define SEXY_MEMTRACE
 
 #include <string>
+#include <cstdint>
 #include <fstream>
 #include <unistd.h>
 #include <time.h>
@@ -18,6 +19,13 @@
 #include <3ds.h>
 #endif
 
+#ifdef NINTENDO_SWITCH
+// Defined in LawnApp.cpp; written from the background loading thread,
+// read here on the main thread to draw a loading bar (see DrawDirtyStuff).
+extern int gSwitchLoadBarTotal;
+extern int gSwitchLoadBarLoaded;
+#endif
+
 #include "SexyAppBase.h"
 //#include "misc/SEHCatcher.h"
 #include "widget/WidgetManager.h"
@@ -27,6 +35,8 @@
 #include "graphics/GLInterface.h"
 #include "graphics/GLImage.h"
 #include "graphics/MemoryImage.h"
+#include "graphics/Graphics.h"
+#include "graphics/Color.h"
 //#include "misc/HTTPTransfer.h"
 #include "widget/Dialog.h"
 #include "imagelib/ImageLib.h"
@@ -45,6 +55,10 @@
 #include "paklib/PakInterface.h"
 #include "sound/DummyMusicInterface.h"
 #include "fcaseopen/fcaseopen.h"
+
+#ifdef NINTENDO_WII
+#include "platform/wii/WiiDebug.h"
+#endif
 
 #include "misc/memmgr.h"
 #include "misc/RegEmu.h"
@@ -177,6 +191,11 @@ SexyAppBase::SexyAppBase()
 	mChangeDirTo = "sdmc:/switch/PlantsvsZombies/";
 #elifdef __3DS__
 	mChangeDirTo = "sdmc:/3ds/PlantsvsZombies/";
+#elifdef NINTENDO_WII
+	// libfat on Wii mounts the SD card as "sd:/" - "sdmc:/" is the
+	// Switch/3DS device name and does NOT exist here, so chdir would
+	// silently fail and every relative fopen would miss the game data
+	mChangeDirTo = "sd:/apps/PlantsvsZombies/";
 #else
 	mChangeDirTo = "./";
 #endif
@@ -2732,6 +2751,72 @@ bool SexyAppBase::DrawDirtyStuff()
 	bool drewScreen = mWidgetManager->DrawScreen();
 	mIsDrawing = false;
 
+#ifdef NINTENDO_SWITCH
+	// The background loading thread (see TodResourceManager::
+	// TodLoadResources / LawnApp::LoadGroup) can't touch GL itself - it
+	// never has the EGL context current on its own thread. It just updates
+	// gSwitchLoadBarTotal/gSwitchLoadBarLoaded; draw the actual bar here,
+	// on the main thread, into the same frame that's about to be presented.
+	if (gSwitchLoadBarTotal > 0 && gSwitchLoadBarLoaded < gSwitchLoadBarTotal)
+	{
+		float aPct = (float)gSwitchLoadBarLoaded / (float)gSwitchLoadBarTotal;
+		if (aPct > 1.0f)
+			aPct = 1.0f;
+		const int aBarX = 250, aBarY = 560, aBarWidth = 300, aBarHeight = 16;
+		Graphics g(mGLInterface->GetScreenImage());
+		g.SetColor(Color(40, 40, 40));
+		g.FillRect(Rect(aBarX, aBarY, aBarWidth, aBarHeight));
+		g.SetColor(Color(80, 200, 80));
+		g.FillRect(Rect(aBarX, aBarY, (int)(aBarWidth * aPct), aBarHeight));
+		drewScreen = true;
+	}
+#endif
+
+#ifdef NINTENDO_WII
+	// Always-on-top live indicator (drawn on the main thread, after the
+	// widget tree - so it survives full-screen fills like TitleScreen's
+	// logo states) showing whether TodResourceManager::TodLoadNextResource
+	// is still advancing. If this bar is frozen while the logo is stuck,
+	// the background loading thread - not the logo's own timer - is what's
+	// actually hung.
+	{
+		int aTicks = (::gWiiDebugResourceLoopCount % 380);
+		Graphics g(mGLInterface->GetScreenImage());
+		g.SetColor(Color(40, 40, 40));
+		g.FillRect(Rect(10, 5, 380, 6));
+		g.SetColor(Color(128, 255, 128));
+		g.FillRect(Rect(10, 5, aTicks, 6));
+
+		// Live (non-sticky) indicator of what LoadNextResource is in the
+		// middle of RIGHT NOW - gray=idle, blue=image, red=sound,
+		// yellow=font. Unlike the checkpoint mask (which stays lit forever
+		// once any resource of that type has ever loaded), this only shows
+		// the current one, so it directly identifies what's actually stuck.
+		Color aTypeColor = Color(48, 48, 48);
+		if (::gWiiDebugCurrentResType == 1) aTypeColor = Color(0, 120, 255);
+		else if (::gWiiDebugCurrentResType == 2) aTypeColor = Color(255, 40, 40);
+		else if (::gWiiDebugCurrentResType == 3) aTypeColor = Color(255, 220, 0);
+		g.SetColor(aTypeColor);
+		g.FillRect(Rect(10, 14, 24, 24));
+
+		// First ~15 chars of the stuck resource's path, one row of 8
+		// bit-squares per character (MSB first) - same encoding as the
+		// resources.xml byte check further down; read top-to-bottom,
+		// left-to-right per row, 8 bits -> 1 ASCII char.
+		for (int aCh = 0; aCh < 15 && ::gWiiDebugCurrentResPath[aCh] != '\0'; aCh++)
+		{
+			unsigned char aByte = (unsigned char)::gWiiDebugCurrentResPath[aCh];
+			for (int aBit = 0; aBit < 8; aBit++)
+			{
+				bool aSet = (aByte >> (7 - aBit)) & 1;
+				g.SetColor(aSet ? Color(255, 0, 128) : Color(40, 40, 40));
+				g.FillRect(Rect(44 + aBit * 12, 14 + aCh * 12, 10, 10));
+			}
+		}
+		drewScreen = true;
+	}
+#endif
+
 	if ((drewScreen || (aStartTime - mLastDrawTick >= 1000) || (mCustomCursorDirty)) &&
 		((int) (aStartTime - mNextDrawTick) >= 0))
 	{
@@ -2883,7 +2968,9 @@ int SexyAppBase::MsgBox(const std::string& theText, const std::string& theTitle,
 
 	BeginPopup();
 	//int aResult = MessageBoxA(mHWnd, theText.c_str(), theTitle.c_str(), theFlags);
+#ifndef NINTENDO_WII
 	printf("%s\n===\n%s\n", theTitle.c_str(), theText.c_str());
+#endif
 
 #ifdef __SWITCH__
 	ErrorApplicationConfig c;
@@ -2910,12 +2997,13 @@ int SexyAppBase::MsgBox(const std::wstring& theText, const std::wstring& theTitl
 
 	BeginPopup();
 	//int aResult = MessageBoxW(mHWnd, theText.c_str(), theTitle.c_str(), theFlags);
+#ifndef NINTENDO_WII
 	wprintf(L"%s\n===\n%s\n", theTitle.c_str(), theText.c_str());
+#endif
 
 #ifdef __SWITCH__
-	std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
 	ErrorApplicationConfig c;
-	errorApplicationCreate(&c, cv.to_bytes(theTitle).c_str(), cv.to_bytes(theText).c_str());
+	errorApplicationCreate(&c, WStringToUtf8(theTitle).c_str(), WStringToUtf8(theText).c_str());
 	errorApplicationShow(&c);
 #endif
 
@@ -2933,8 +3021,12 @@ void SexyAppBase::Popup(const std::string& theString)
 	}
 
 	BeginPopup();
+#ifndef NINTENDO_WII
+	// plain printf() with no console/stdio backend configured has been
+	// observed to block indefinitely on Wii (see wii-port branch history)
 	if (!mShutdown)
 		printf("FATAL ERROR\n===\n%s\n", theString.c_str());
+#endif
 
 #ifdef __SWITCH__
 	ErrorApplicationConfig c;
@@ -2954,13 +3046,14 @@ void SexyAppBase::Popup(const std::wstring& theString)
 	}
 
 	BeginPopup();
+#ifndef NINTENDO_WII
 	if (!mShutdown)
 		wprintf(L"FATAL ERROR\n===\n%s\n", theString.c_str());
+#endif
 
 #ifdef __SWITCH__
-	std::wstring_convert<std::codecvt_utf8<wchar_t> > cv;
 	ErrorApplicationConfig c;
-	errorApplicationCreate(&c, "Fatal error", cv.to_bytes(theString).c_str());
+	errorApplicationCreate(&c, "Fatal error", WStringToUtf8(theString).c_str());
 	errorApplicationShow(&c);
 #endif
 
@@ -4457,6 +4550,10 @@ bool SexyAppBase::Process(bool allowSleep)
 
 void SexyAppBase::DoMainLoop()
 {
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(12); // first time DoMainLoop actually runs
+#endif
+
 	while (!mShutdown)
 	{
 		if (mExitToTop)
@@ -4572,10 +4669,18 @@ void SexyAppBase::Start()
 	if (mShutdown)
 		return;
 
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(9); // Start() entered
+#endif
+
 	StartCursorThread();
 
 	if (mAutoStartLoadingThread)
 		StartLoadingThread();
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(10); // loading thread spawned (pthread_create returned)
+#endif
 
 	//::ShowWindow(mHWnd, SW_SHOW);
 	//::SetFocus(mHWnd);
@@ -4591,6 +4696,10 @@ void SexyAppBase::Start()
 	mLastTime = aStartTime;
 	mLastUserInputTick = aStartTime;
 	mLastTimerTime = aStartTime;
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(11); // about to enter the per-frame game loop
+#endif
 
 	DoMainLoop();
 	ProcessSafeDeleteList();
@@ -5075,7 +5184,7 @@ void SexyAppBase::Init()
 	strcat(aPath, "/savedata/");
 	SetAppDataFolder(aPath);
 
-	gPakInterface->AddPakFile("main.pak");
+	gPakInterface->AddPakFile("main.pak"); // WII DEBUG: progress recorded in ::gWiiDebugPakStep (see PakInterface.cpp)
 
 	// Create a message we can use to talk to ourselves inter-process
 	//mNotifyGameMessage = RegisterWindowMessage((__S("Notify") + StringToSexyString(mProdName)).c_str());
@@ -5206,11 +5315,17 @@ void SexyAppBase::Init()
 	*/
 
 	MakeWindow();
-		
+
+#ifdef NINTENDO_WII
+	// mGLInterface is guaranteed valid from here on; this also draws the
+	// pak-load progress recorded earlier (before the renderer existed)
+	WiiDebugCheckpoint(1);
+#endif
+
 	if (mPlayingDemoBuffer)
 	{
 		// Get video data
-		
+
 		PrepareDemoCommand(true);
 		mDemoNeedsCommand = true;
 		
@@ -5235,9 +5350,21 @@ void SexyAppBase::Init()
 		SetCursor(CURSOR_NONE);
 	}
 
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(2); // reached tail of SexyAppBase::Init(), about to InitHook()
+#endif
+
 	InitHook();
 
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(3); // InitHook() returned, about to InitInput()
+#endif
+
 	InitInput();
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(4); // InitInput() returned (WPAD/PAD init didn't hang)
+#endif
 
 	mInitialized = true;
 }

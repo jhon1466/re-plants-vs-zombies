@@ -12,6 +12,17 @@ enum
 	FILEFLAGS_END = 0x80
 };
 
+// main.pak's table of contents stores multi-byte fields little-endian (it was
+// authored for x86); PowerPC (Wii, and eventually Wii U) is big-endian, so
+// every multi-byte field read from the file needs byte-swapping there.
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define PAK_LE32(x) __builtin_bswap32(x)
+#define PAK_LE64(x) __builtin_bswap64(x)
+#else
+#define PAK_LE32(x) (x)
+#define PAK_LE64(x) (x)
+#endif
+
 PakInterface* gPakInterface = new PakInterface();
 
 static std::string StringToUpper(const std::string& theString)
@@ -85,8 +96,19 @@ static void FixFileName(const char* theFileName, char* theUpperName)
 	}
 }
 
+#ifdef NINTENDO_WII
+// WII DEBUG: definition for the ::gWiiDebugPakStep declared in PakInterface.h
+// 0=not started 1=file opened 2=size read 3=mem allocated 4=fread ok
+// 5=xor-decoded 6=second FOpen ok 7=magic ok 8=version ok 9=loop finished
+int gWiiDebugPakStep = 0;
+#define WII_PAK_STEP(n) (gWiiDebugPakStep = (n))
+#else
+#define WII_PAK_STEP(n)
+#endif
+
 bool PakInterface::AddPakFile(const std::string& theFileName)
 {
+	WII_PAK_STEP(0);
 	/*
 	HANDLE aFileHandle = CreateFile(theFileName.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 
@@ -113,10 +135,12 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 
 	FILE *aFileHandle = fcaseopen(theFileName.c_str(), "rb");
     if (!aFileHandle) return false;
+	WII_PAK_STEP(1);
 
     fseek(aFileHandle, 0, SEEK_END);
     size_t aFileSize = ftell(aFileHandle);
     fseek(aFileHandle, 0, SEEK_SET);
+	WII_PAK_STEP(2);
 
 	mPakCollectionList.emplace_back(aFileSize);
 	PakCollection* aPakCollection = &mPakCollectionList.back();
@@ -126,17 +150,26 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 	aPakCollection->mDataPtr = aPtr;
 	*/
 
+	if (aPakCollection->mDataPtr == NULL)
+	{
+		fclose(aFileHandle);
+		return false;
+	}
+	WII_PAK_STEP(3);
+
 	if (fread(aPakCollection->mDataPtr, 1, aFileSize, aFileHandle) != aFileSize) {
         fclose(aFileHandle);
         return false;
     }
     fclose(aFileHandle);
+	WII_PAK_STEP(4);
 
     {
         auto *aDataPtr = static_cast<uint8_t *>(aPakCollection->mDataPtr);
         for (size_t i = 0; i < aFileSize; i++)
             *aDataPtr++ ^= 0xF7;
     }
+	WII_PAK_STEP(5);
 
 	PakRecordMap::iterator aRecordItr = mPakRecordMap.insert(PakRecordMap::value_type(StringToUpper(theFileName), PakRecord())).first;
 	PakRecord* aPakRecord = &(aRecordItr->second);
@@ -144,26 +177,31 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 	aPakRecord->mFileName = theFileName;
 	aPakRecord->mStartPos = 0;
 	aPakRecord->mSize = aFileSize;
-	
+
 	PFILE* aFP = FOpen(theFileName.c_str(), "rb");
 	if (aFP == NULL)
 		return false;
+	WII_PAK_STEP(6);
 
 	uint32_t aMagic = 0;
 	FRead(&aMagic, sizeof(uint32_t), 1, aFP);
+	aMagic = PAK_LE32(aMagic);
 	if (aMagic != 0xBAC04AC0)
 	{
 		FClose(aFP);
 		return false;
 	}
+	WII_PAK_STEP(7);
 
 	uint32_t aVersion = 0;
 	FRead(&aVersion, sizeof(uint32_t), 1, aFP);
+	aVersion = PAK_LE32(aVersion);
 	if (aVersion > 0)
 	{
 		FClose(aFP);
 		return false;
 	}
+	WII_PAK_STEP(8);
 
 	int aPos = 0;
 
@@ -181,8 +219,10 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 		aName[aNameWidth] = 0;
 		int aSrcSize = 0;
 		FRead(&aSrcSize, sizeof(int), 1, aFP);
+		aSrcSize = (int)PAK_LE32((uint32_t)aSrcSize);
 		int64_t aFileTime;
 		FRead(&aFileTime, sizeof(int64_t), 1, aFP);
+		aFileTime = (int64_t)PAK_LE64((uint64_t)aFileTime);
 
 		for (int i=0; i<aNameWidth; i++)
 		{
@@ -217,6 +257,7 @@ bool PakInterface::AddPakFile(const std::string& theFileName)
 	}
 
 	FClose(aFP);
+	WII_PAK_STEP(9);
 
 	return true;
 }
@@ -249,6 +290,21 @@ PFILE* PakInterface::FOpen(const char* theFileName, const char* anAccess)
 			return aPFP;
 		}
 	}
+
+#ifdef NINTENDO_WII
+	// images/, reanim/, particles/ and sounds/ only ever exist packed inside
+	// main.pak for this game - there are no loose files there on the SD
+	// card. ImageLib::GetImage tries up to 4 extensions per image with no
+	// explicit one given, so every miss above falls through to here; on
+	// Wii/Dolphin's libfat, fcaseopen's real directory scan for a path that
+	// can never exist is slow enough (or hangs outright) to look like a
+	// dead boot. Skip straight to failure for these prefixes instead.
+	if (strncasecmp(theFileName, "images/", 7) == 0 ||
+		strncasecmp(theFileName, "reanim/", 7) == 0 ||
+		strncasecmp(theFileName, "particles/", 10) == 0 ||
+		strncasecmp(theFileName, "sounds/", 7) == 0)
+		return NULL;
+#endif
 
 	FILE* aFP = fcaseopen(theFileName, anAccess);
 	if (aFP == NULL)

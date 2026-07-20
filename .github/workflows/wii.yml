@@ -1,31 +1,35 @@
-name: Switch build
+name: Wii build
 on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: devkitpro/devkita64:latest
+      image: devkitpro/devkitppc:latest
     steps:
       - uses: actions/checkout@v4
+
+      # wii-sdl2/ppc-zlib/ppc-libjpeg-turbo/ppc-libpng/ppc-libogg/ppc-libvorbis/ppc-mpg123
+      # already ship preinstalled in the devkitpro/devkitppc image (same situation the
+      # Switch workflow hit - see "take 4: it's all preinstalled" in git history)
 
       # libopenmpt doesn't change between our iterations on this branch, and
       # rebuilding it from source is most of this workflow's runtime - cache
       # the installed lib/headers so only real source changes trigger it again
-      - name: Cache libopenmpt for Switch
+      - name: Cache libopenmpt for Wii
         id: openmpt-cache
         uses: actions/cache@v4
         with:
           path: |
-            /opt/devkitpro/portlibs/switch/lib/libopenmpt.a
-            /opt/devkitpro/portlibs/switch/include/libopenmpt
-          key: switch-openmpt-v1
+            /opt/devkitpro/portlibs/wii/lib/libopenmpt.a
+            /opt/devkitpro/portlibs/wii/include/libopenmpt
+          key: wii-openmpt-v1
 
-      - name: Compile libopenmpt for Switch
+      - name: Compile libopenmpt for Wii
         if: steps.openmpt-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          source $DEVKITPRO/switchvars.sh
+          source $DEVKITPRO/wiivars.sh
           git clone https://github.com/OpenMPT/openmpt
           cd openmpt
           make CONFIG=gcc SHARED_LIB=0 DYNLINK=0 EXAMPLES=0 OPENMPT123=0 TEST=0 PREFIX=$PORTLIBS_PREFIX install
@@ -34,29 +38,29 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /root/.ccache
-          key: switch-ccache-${{ github.sha }}
+          key: wii-ccache-${{ github.sha }}
           restore-keys: |
-            switch-ccache-
+            wii-ccache-
 
       - name: Run CMake and compile
         shell: bash
         run: |
-          source $DEVKITPRO/switchvars.sh
+          source $DEVKITPRO/wiivars.sh
           which ccache >/dev/null 2>&1 || (apt-get update && apt-get install -y ccache)
           export CCACHE_DIR=/root/.ccache
           export CCACHE_MAXSIZE=500M
           mkdir build
           cd build
-          aarch64-none-elf-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O2 \
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Wii.cmake -DCMAKE_BUILD_TYPE=MinSizeRel \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           make
           ccache -s || true
 
-      - name: Upload .nro artifact
+      - name: Upload .dol artifact
         uses: actions/upload-artifact@v4
         with:
-          name: re-plants-vs-zombies.nro
-          path: ./build/re-plants-vs-zombies.nro
+          name: re-plants-vs-zombies.dol
+          path: ./build/re-plants-vs-zombies.dol
 
       - name: Upload .elf artifact
         uses: actions/upload-artifact@v4

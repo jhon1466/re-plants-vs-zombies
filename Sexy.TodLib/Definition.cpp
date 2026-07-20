@@ -811,7 +811,7 @@ bool DefinitionReadVector2Field(XMLParser* theXmlParser, SexyVector2* theValue)
     if (!DefinitionReadXMLString(theXmlParser, aStringValue))
         return false;
 
-    if (sexysscanf(aStringValue.c_str(), __S("%f %f"), theValue) == 1)
+    if (sexysscanf(aStringValue.c_str(), __S("%f %f"), &theValue->x, &theValue->y) == 2)
         return true;
 
     DefinitionXmlError(theXmlParser, "Can't parse vector2 value '%s'", aStringValue.c_str());
@@ -1055,7 +1055,7 @@ bool DefinitionReadFlagField(XMLParser* theXmlParser, const SexyString& theEleme
         return false;
 
     float aFlag; // This was obviously a bug, the casting is wrong, although amusingly it just woks since it's just a bit
-    if (sexysscanf(aStringValue.c_str(), __S("%f %f"), &aFlag) != 1)
+    if (sexysscanf(aStringValue.c_str(), __S("%f"), &aFlag) != 1)
     {
         DefinitionXmlError(theXmlParser, "Can't parse int value '%s'", aStringValue.c_str());
         return false;

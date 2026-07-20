@@ -5,6 +5,7 @@
 #include "png.h"
 #include <math.h>
 #include "paklib/PakInterface.h"
+#include "../../Sexy.TodLib/TodDebug.h"
 
 extern "C"
 {
@@ -13,6 +14,22 @@ extern "C"
 }
 
 using namespace ImageLib;
+
+#ifdef NINTENDO_WII
+#include "platform/wii/WiiDebug.h"
+int gWiiDebugGifLoopCount = 0;
+#endif
+
+// TGA (and other simple container formats parsed byte-by-byte below) store
+// multi-byte header fields little-endian; reading them straight into a
+// native WORD is silently wrong on a big-endian target like Wii - e.g. a
+// real width of 130 gets read back as 33280, which is exactly the kind of
+// corrupt value that makes "new uint32_t[width*height]" hang/fail.
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define IMG_LE16(x) __builtin_bswap16(x)
+#else
+#define IMG_LE16(x) (x)
+#endif
 
 Image::Image()
 {
@@ -183,10 +200,12 @@ Image* GetTGAImage(const std::string& theFileName)
 	p_fread(&aYOrigin, sizeof(WORD), 1, aTGAFile);
 
 	WORD anImageWidth;
-	p_fread(&anImageWidth, sizeof(WORD), 1, aTGAFile);	
+	p_fread(&anImageWidth, sizeof(WORD), 1, aTGAFile);
+	anImageWidth = IMG_LE16(anImageWidth);
 
 	WORD anImageHeight;
-	p_fread(&anImageHeight, sizeof(WORD), 1, aTGAFile);	
+	p_fread(&anImageHeight, sizeof(WORD), 1, aTGAFile);
+	anImageHeight = IMG_LE16(anImageHeight);
 
 	BYTE aBitCount = 32;
 	p_fread(&aBitCount, sizeof(BYTE), 1, aTGAFile);	
@@ -258,6 +277,9 @@ Image* GetGIFImage(const std::string& theFileName)
 
 	if ((fp = p_fopen(theFileName.c_str(), "rb")) == NULL)
 		return NULL;
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(34); // GetGIFImage: p_fopen succeeded
+#endif
 	/*
 	Determine if this is a GIF file.
 	*/
@@ -267,6 +289,9 @@ Image* GetGIFImage(const std::string& theFileName)
 	// 文件头的 ASCII 值为“GIF87a”或”GIF89a”，其中前三位为 GIF 签名，后三位为不同年份的版本号
 	if (((strncmp((char*)magick, "GIF87", 5) != 0) && (strncmp((char*)magick, "GIF89", 5) != 0)))
 		return NULL;
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(35); // GetGIFImage: valid GIF magic confirmed
+#endif
 
 	global_colors = 0;
 	global_colormap = (unsigned char*)NULL;
@@ -276,7 +301,9 @@ Image* GetGIFImage(const std::string& theFileName)
 
 	// 读取逻辑屏幕描述符，共 7 字节
 	p_fread(&pw, sizeof(short), 1, fp);  // 读取图像渲染区域的宽度
+	pw = (short)IMG_LE16((unsigned short)pw);
 	p_fread(&ph, sizeof(short), 1, fp);  // 读取图像渲染区域的高度
+	ph = (short)IMG_LE16((unsigned short)ph);
 	p_fread(&flag, sizeof(char), 1, fp);  // 读取图像标志
 	p_fread(&background, sizeof(char), 1, fp);  // 读取背景色在全局颜色列表中的索引，若无全局颜色列表则此字节无效
 	p_fread(&c, sizeof(char), 1, fp);  // 读取像素宽高比
@@ -302,6 +329,11 @@ Image* GetGIFImage(const std::string& theFileName)
 
 	for (; ; )
 	{
+#ifdef NINTENDO_WII
+		++gWiiDebugGifLoopCount;
+		if ((gWiiDebugGifLoopCount % 20) == 0)
+			WiiDebugRedraw();
+#endif
 		if (p_fread(&c, sizeof(char), 1, fp) == 0)
 			break;  // 如果读取错误或读取到文件尾则退出，返回空指针
 
@@ -412,9 +444,13 @@ Image* GetGIFImage(const std::string& theFileName)
 		bool interlaced;
 
 		p_fread(&pagex, sizeof(short), 1, fp);  // 读取帧的横坐标（Left）
+		pagex = (short)IMG_LE16((unsigned short)pagex);
 		p_fread(&pagey, sizeof(short), 1, fp);  // 读取帧的纵坐标（Top）
+		pagey = (short)IMG_LE16((unsigned short)pagey);
 		p_fread(&width, sizeof(short), 1, fp);  // 读取帧的横向宽度（Width）
+		width = (short)IMG_LE16((unsigned short)width);
 		p_fread(&height, sizeof(short), 1, fp);  // 取得帧的纵向高度（Height）
+		height = (short)IMG_LE16((unsigned short)height);
 		p_fread(&flag, sizeof(char), 1, fp);  // 读取帧标志的压缩字节
 
 		colors = !BitSet(flag, 0x80) ? global_colors : 1 << ((flag & 0x07) + 1);  // 判断使用全局颜色列表或使用局部颜色列表，并取得列表大小
@@ -1312,17 +1348,45 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 
 	Image* anImage = NULL;
 
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(26); // entered ImageLib::GetImage
+#endif
+
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".tga") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(27); // trying TGA
+#endif
 		anImage = GetTGAImage(aFilename + ".tga");
+	}
 
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".jpg") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(28); // trying JPEG
+#endif
 		anImage = GetJPEGImage(aFilename + ".jpg");
+	}
 
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".png") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(29); // trying PNG
+#endif
 		anImage = GetPNGImage(aFilename + ".png");
+	}
 
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".gif") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(30); // trying GIF
+#endif
 		anImage = GetGIFImage(aFilename + ".gif");
+	}
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(31); // all format decoders returned (about to Rescale)
+#endif
 
 	if ((anImage == NULL) && (strcasecmp(anExt.c_str(), ".j2k") == 0))
 		unreachable(); // There are no JPEG2000 files in the project
@@ -1336,6 +1400,12 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 	{
 		int aNewWidth = anImage->mWidth/IMG_DOWNSCALE;
 		int aNewHeight = anImage->mHeight/IMG_DOWNSCALE;
+		// IMG_DOWNSCALE==1 means aNewWidth/aNewHeight always equal the source
+		// dimensions - Rescale() would just allocate a same-size copy and
+		// throw the original away, doubling peak memory for every image
+		// loaded for no benefit. Skip it entirely in that case (this branch
+		// is compile-time dead when IMG_DOWNSCALE is a literal 1).
+#if IMG_DOWNSCALE != 1
 		if (aNewWidth > 0 && aNewHeight > 0)
 		{
 			unsigned char* aNewData = Rescale(anImage->mWidth, anImage->mHeight, aNewWidth, aNewHeight, (unsigned char*)anImage->mBits);
@@ -1344,7 +1414,12 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 			anImage->mWidth = aNewWidth;
 			anImage->mHeight = aNewHeight;
 		}
+#endif
 	}
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(32); // Rescale done, about to look for/compose alpha image
+#endif
 
 	// Check for alpha images
 	Image* anAlphaImage = NULL;
@@ -1411,6 +1486,10 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 			}
 		}
 	}
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(33); // ImageLib::GetImage returning
+#endif
 
 	return anImage;
 }

@@ -11,6 +11,10 @@ extern "C" {
 }
 #endif
 
+#ifdef NINTENDO_WII
+#include <fat.h>
+#endif
+
 bool (*gAppCloseRequest)();				//[0x69E6A0]
 bool (*gAppHasUsedCheatKeys)();			//[0x69E6A4]
 SexyString (*gGetCurrentLevelName)();
@@ -21,6 +25,12 @@ int main(int argc, char** argv)
 {
 #ifdef __3DS__
 	osSetSpeedupEnable(true);
+#endif
+
+#ifdef NINTENDO_WII
+	// mounts sdmc:/ - must happen before anything (chdir, AddPakFile) touches
+	// the SD card; SexyAppBase::Init() does both well before MakeWindow() runs
+	fatInitDefault();
 #endif
 
 	TodStringListSetColors(gLawnStringFormats, gLawnStringFormatCount);
