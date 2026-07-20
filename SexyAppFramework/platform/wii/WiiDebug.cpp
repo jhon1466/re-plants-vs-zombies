@@ -1,5 +1,6 @@
 #include "WiiDebug.h"
 
+#include <cstdint>
 #include <gccore.h>
 
 #include "SexyAppBase.h"
@@ -11,7 +12,11 @@
 
 using namespace Sexy;
 
-static unsigned int gCheckpointMask = 0;
+// unsigned int (32 bits) isn't wide enough once checkpoint IDs pass 31 -
+// 1u << 34 is shift-amount-exceeds-width UB, so checkpoints 34/35 could
+// never light up correctly regardless of whether that code path actually
+// ran. Use a 64-bit mask so IDs up to 63 are safe.
+static uint64_t gCheckpointMask = 0;
 
 // Logical screen is only 400px wide (800/2 from DOWNSCALE_COUNT) - anything
 // drawn past x=400 is silently off-screen. Keep every row within that.
@@ -109,7 +114,7 @@ static void DrawState()
 
 void WiiDebugCheckpoint(int theId)
 {
-	gCheckpointMask |= 1u << theId;
+	gCheckpointMask |= 1ull << theId;
 	DrawState();
 }
 
