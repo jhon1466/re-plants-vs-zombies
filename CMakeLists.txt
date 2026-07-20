@@ -133,7 +133,7 @@ elseif (NINTENDO_SWITCH)
 
 	nx_generate_nacp(re-plants-vs-zombies.nacp
 		NAME "Plants vs. Zombies"
-		AUTHOR "PopCap Games, Unofficial Switch port by Headshotnoby"
+		AUTHOR "PopCap Games, Unofficial Switch port by jhon1466"
 		VERSION "0.1"
 	)
 
@@ -147,7 +147,7 @@ elseif (NINTENDO_3DS)
 	ctr_generate_smdh(re-plants-vs-zombies.smdh
 		NAME "Plants vs. Zombies"
 		DESCRIPTION "GOTY Edition"
-		AUTHOR "PopCap Games, Unofficial 3DS port by Headshotnoby"
+		AUTHOR "PopCap Games, Unofficial 3DS port by jhon1466"
 		VERSION "0.1"
 		ICON "${CMAKE_CURRENT_SOURCE_DIR}/icon-3ds.png"
 	)
