@@ -35,6 +35,9 @@
 #ifdef NINTENDO_WII
 #include "platform/wii/WiiDebug.h"
 #endif
+#ifdef NINTENDO_SWITCH
+#include "graphics/GLInterface.h"
+#endif
 #include "Sexy.TodLib/TodStringFile.h"
 #include "Lawn/Widget/AlmanacDialog.h"
 #include "Lawn/Widget/NewUserDialog.h"
@@ -1739,9 +1742,31 @@ void LawnApp::LoadGroup(const char* theGroupName, int theGroupAveMsToLoad)
 	aTimer.Start();
 
 	mResourceManager->StartLoadResources(theGroupName);
+#ifdef NINTENDO_SWITCH
+	// The initial resource groups load via this tight loop with no
+	// intervening screen updates, so on Switch the whole thing was a black
+	// screen for several seconds with no sign of progress. Draw a simple
+	// bar directly (bypassing the normal widget/font system, which isn't
+	// loaded yet for the very first group) so it's visibly not frozen.
+	int aBarTotal = mResourceManager->GetNumResources(theGroupName);
+	int aBarLoaded = 0;
+#endif
 	while (!mShutdown && !mCloseRequest && !mLoadingFailed && TodLoadNextResource())
 	{
 		mCompletedLoadingThreadTasks += theGroupAveMsToLoad;
+#ifdef NINTENDO_SWITCH
+		aBarLoaded++;
+		if (mGLInterface != NULL && aBarTotal > 0)
+		{
+			float aPct = (float)aBarLoaded / (float)aBarTotal;
+			if (aPct > 1.0f)
+				aPct = 1.0f;
+			const int aBarX = 250, aBarY = 560, aBarWidth = 300, aBarHeight = 16;
+			mGLInterface->FillRect(Rect(aBarX, aBarY, aBarWidth, aBarHeight), Color(40, 40, 40), Graphics::DRAWMODE_NORMAL);
+			mGLInterface->FillRect(Rect(aBarX, aBarY, (int)(aBarWidth * aPct), aBarHeight), Color(80, 200, 80), Graphics::DRAWMODE_NORMAL);
+			mGLInterface->Redraw();
+		}
+#endif
 	}
 
 	if (mShutdown || mCloseRequest)
