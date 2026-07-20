@@ -1416,6 +1416,12 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 		int aNewWidth = anImage->mWidth/IMG_DOWNSCALE;
 		int aNewHeight = anImage->mHeight/IMG_DOWNSCALE;
 		TodTraceAndLog("ImageLib::GetImage: decoded %dx%d, downscale=%d -> %dx%d\n", anImage->mWidth, anImage->mHeight, IMG_DOWNSCALE, aNewWidth, aNewHeight);
+		// IMG_DOWNSCALE==1 means aNewWidth/aNewHeight always equal the source
+		// dimensions - Rescale() would just allocate a same-size copy and
+		// throw the original away, doubling peak memory for every image
+		// loaded for no benefit. Skip it entirely in that case (this branch
+		// is compile-time dead when IMG_DOWNSCALE is a literal 1).
+#if IMG_DOWNSCALE != 1
 		if (aNewWidth > 0 && aNewHeight > 0)
 		{
 			unsigned char* aNewData = Rescale(anImage->mWidth, anImage->mHeight, aNewWidth, aNewHeight, (unsigned char*)anImage->mBits);
@@ -1425,6 +1431,7 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 			anImage->mWidth = aNewWidth;
 			anImage->mHeight = aNewHeight;
 		}
+#endif
 	}
 
 #ifdef NINTENDO_WII
