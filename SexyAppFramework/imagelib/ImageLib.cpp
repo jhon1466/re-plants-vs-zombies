@@ -1121,12 +1121,18 @@ METHODDEF(void) init_source (j_decompress_ptr cinfo)
 	src->start_of_file = TRUE;
 }
 
+static int gFillInputBufferCallCount = 0;
+
 METHODDEF(boolean) fill_input_buffer (j_decompress_ptr cinfo)
 {
 	pak_src_ptr src = (pak_src_ptr) cinfo->src;
 	size_t nbytes;
 
+	gFillInputBufferCallCount++;
+	TodTraceAndLog("fill_input_buffer: call #%d\n", gFillInputBufferCallCount);
+
 	nbytes = p_fread(src->buffer, 1, INPUT_BUF_SIZE, src->infile);
+	TodTraceAndLog("fill_input_buffer: p_fread returned %u bytes\n", (unsigned int)nbytes);
 	//((size_t) fread((void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))
 
 	if (nbytes <= 0) {
@@ -1249,6 +1255,9 @@ Image* GetJPEGImage(const std::string& theFileName)
 	uint32_t* aBits = new uint32_t[cinfo.output_width*cinfo.output_height];
 	TodTraceAndLog("GetJPEGImage: pixel buffer allocated at %p\n", (void*)aBits);
 	uint32_t* q = aBits;
+
+	gFillInputBufferCallCount = 0;
+	TodTraceAndLog("GetJPEGImage: about to enter scanline loop\n");
 
 	if (cinfo.output_components==1)
 	{
