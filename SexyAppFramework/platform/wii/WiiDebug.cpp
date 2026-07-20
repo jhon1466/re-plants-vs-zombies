@@ -36,6 +36,9 @@ static void DrawState()
 	// ShowResourceError returned, 8/14 = TodLoadResources true/false,
 	// 9-12 = Start/DoMainLoop, 15-18 = ProcessDeferredMessages substeps,
 	// 20/21 = about-to/returned DoLoadImage, 22/23 = DoLoadSound, 24/25 = DoLoadFont
+	// 26 = entered ImageLib::GetImage, 27/28/29/30 = trying TGA/JPG/PNG/GIF,
+	// 31 = decoders done, 32 = rescale done (about to load alpha), 33 = GetImage returning.
+	// If 20 lit but 21 not, the last-lit of 26-33 pinpoints where the image load hangs.
 	{
 		const int perRow = 17;
 		for (int i = 0; i < 34; i++)

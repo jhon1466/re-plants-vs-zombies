@@ -14,6 +14,10 @@ extern "C"
 
 using namespace ImageLib;
 
+#ifdef NINTENDO_WII
+#include "platform/wii/WiiDebug.h"
+#endif
+
 // TGA (and other simple container formats parsed byte-by-byte below) store
 // multi-byte header fields little-endian; reading them straight into a
 // native WORD is silently wrong on a big-endian target like Wii - e.g. a
@@ -1327,17 +1331,45 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 
 	Image* anImage = NULL;
 
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(26); // entered ImageLib::GetImage
+#endif
+
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".tga") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(27); // trying TGA
+#endif
 		anImage = GetTGAImage(aFilename + ".tga");
+	}
 
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".jpg") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(28); // trying JPEG
+#endif
 		anImage = GetJPEGImage(aFilename + ".jpg");
+	}
 
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".png") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(29); // trying PNG
+#endif
 		anImage = GetPNGImage(aFilename + ".png");
+	}
 
 	if ((anImage == NULL) && ((strcasecmp(anExt.c_str(), ".gif") == 0) || (anExt.length() == 0)))
+	{
+#ifdef NINTENDO_WII
+		WiiDebugCheckpoint(30); // trying GIF
+#endif
 		anImage = GetGIFImage(aFilename + ".gif");
+	}
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(31); // all format decoders returned (about to Rescale)
+#endif
 
 	if ((anImage == NULL) && (strcasecmp(anExt.c_str(), ".j2k") == 0))
 		unreachable(); // There are no JPEG2000 files in the project
@@ -1360,6 +1392,10 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 			anImage->mHeight = aNewHeight;
 		}
 	}
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(32); // Rescale done, about to look for/compose alpha image
+#endif
 
 	// Check for alpha images
 	Image* anAlphaImage = NULL;
@@ -1426,6 +1462,10 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 			}
 		}
 	}
+
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(33); // ImageLib::GetImage returning
+#endif
 
 	return anImage;
 }
