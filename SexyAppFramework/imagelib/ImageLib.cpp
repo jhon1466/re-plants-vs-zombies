@@ -5,6 +5,7 @@
 #include "png.h"
 #include <math.h>
 #include "paklib/PakInterface.h"
+#include "../../Sexy.TodLib/TodDebug.h"
 
 extern "C"
 {
