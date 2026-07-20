@@ -17,6 +17,7 @@ using namespace ImageLib;
 
 #ifdef NINTENDO_WII
 #include "platform/wii/WiiDebug.h"
+int gWiiDebugGifLoopCount = 0;
 #endif
 
 // TGA (and other simple container formats parsed byte-by-byte below) store
@@ -276,6 +277,9 @@ Image* GetGIFImage(const std::string& theFileName)
 
 	if ((fp = p_fopen(theFileName.c_str(), "rb")) == NULL)
 		return NULL;
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(34); // GetGIFImage: p_fopen succeeded
+#endif
 	/*
 	Determine if this is a GIF file.
 	*/
@@ -285,6 +289,9 @@ Image* GetGIFImage(const std::string& theFileName)
 	// 文件头的 ASCII 值为“GIF87a”或”GIF89a”，其中前三位为 GIF 签名，后三位为不同年份的版本号
 	if (((strncmp((char*)magick, "GIF87", 5) != 0) && (strncmp((char*)magick, "GIF89", 5) != 0)))
 		return NULL;
+#ifdef NINTENDO_WII
+	WiiDebugCheckpoint(35); // GetGIFImage: valid GIF magic confirmed
+#endif
 
 	global_colors = 0;
 	global_colormap = (unsigned char*)NULL;
@@ -322,6 +329,11 @@ Image* GetGIFImage(const std::string& theFileName)
 
 	for (; ; )
 	{
+#ifdef NINTENDO_WII
+		++gWiiDebugGifLoopCount;
+		if ((gWiiDebugGifLoopCount % 20) == 0)
+			WiiDebugRedraw();
+#endif
 		if (p_fread(&c, sizeof(char), 1, fp) == 0)
 			break;  // 如果读取错误或读取到文件尾则退出，返回空指针
 

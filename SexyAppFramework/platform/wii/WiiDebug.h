@@ -22,4 +22,10 @@ void WiiDebugHalt();
 // a slow-but-progressing resource load apart from a stuck one.
 extern int gWiiDebugResourceLoopCount;
 
+// Bumped once per outer for(;;) iteration in GetGIFImage's block-skipping
+// loop (ImageLib.cpp, global namespace - that file doesn't have "using
+// namespace Sexy;" either). Distinguishes a genuinely stuck GIF parse from
+// one that's just iterating a very long extension-block chain.
+extern int gWiiDebugGifLoopCount;
+
 #endif // __SEXY_WII_DEBUG_H__
