@@ -1,6 +1,7 @@
 #include "WiiDebug.h"
 
 #include <cstdint>
+#include <cstring>
 #include <gccore.h>
 
 #include "SexyAppBase.h"
@@ -11,6 +12,16 @@
 #include "paklib/PakInterface.h"
 
 using namespace Sexy;
+
+int gWiiDebugCurrentResType = 0;
+char gWiiDebugCurrentResPath[32] = {0};
+
+void WiiDebugSetCurrentResource(int theType, const char* thePath)
+{
+	gWiiDebugCurrentResType = theType;
+	strncpy(gWiiDebugCurrentResPath, thePath, sizeof(gWiiDebugCurrentResPath) - 1);
+	gWiiDebugCurrentResPath[sizeof(gWiiDebugCurrentResPath) - 1] = '\0';
+}
 
 // unsigned int (32 bits) isn't wide enough once checkpoint IDs pass 31 -
 // 1u << 34 is shift-amount-exceeds-width UB, so checkpoints 34/35 could

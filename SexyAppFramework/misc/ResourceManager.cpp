@@ -984,10 +984,12 @@ bool ResourceManager::LoadNextResource()
 
 #ifdef NINTENDO_WII
 				WiiDebugCheckpoint(20); // about to DoLoadImage
+				WiiDebugSetCurrentResource(1, anImageRes->mPath.c_str());
 #endif
 				bool aResult = DoLoadImage(anImageRes);
 #ifdef NINTENDO_WII
 				WiiDebugCheckpoint(21); // DoLoadImage returned
+				WiiDebugSetCurrentResource(0, "");
 #endif
 				return aResult;
 			}
@@ -1000,10 +1002,12 @@ bool ResourceManager::LoadNextResource()
 
 #ifdef NINTENDO_WII
 				WiiDebugCheckpoint(22); // about to DoLoadSound
+				WiiDebugSetCurrentResource(2, aSoundRes->mPath.c_str());
 #endif
 				bool aResult = DoLoadSound(aSoundRes);
 #ifdef NINTENDO_WII
 				WiiDebugCheckpoint(23); // DoLoadSound returned
+				WiiDebugSetCurrentResource(0, "");
 #endif
 				return aResult;
 			}
@@ -1016,10 +1020,12 @@ bool ResourceManager::LoadNextResource()
 
 #ifdef NINTENDO_WII
 				WiiDebugCheckpoint(24); // about to DoLoadFont
+				WiiDebugSetCurrentResource(3, aFontRes->mPath.c_str());
 #endif
 				bool aResult = DoLoadFont(aFontRes);
 #ifdef NINTENDO_WII
 				WiiDebugCheckpoint(25); // DoLoadFont returned
+				WiiDebugSetCurrentResource(0, "");
 #endif
 				return aResult;
 			}

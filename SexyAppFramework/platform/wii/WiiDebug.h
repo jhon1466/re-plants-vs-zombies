@@ -36,4 +36,14 @@ extern int gWiiDebugGifLoopCount;
 // in the background loading thread.
 unsigned long long WiiDebugGetCheckpointMask();
 
+// Live (non-sticky, unlike the checkpoint mask) record of whatever resource
+// LoadNextResource is currently in the middle of loading - set right before
+// DoLoadImage/DoLoadSound/DoLoadFont, cleared right after. theType: 0=none,
+// 1=image, 2=sound, 3=font. Copies up to 31 chars of thePath so the
+// always-on-top overlay can show *which* resource is stuck, not just that
+// something is.
+void WiiDebugSetCurrentResource(int theType, const char* thePath);
+extern int gWiiDebugCurrentResType;
+extern char gWiiDebugCurrentResPath[32];
+
 #endif // __SEXY_WII_DEBUG_H__

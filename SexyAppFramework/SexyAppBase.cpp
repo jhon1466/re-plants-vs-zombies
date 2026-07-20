@@ -2787,17 +2787,31 @@ bool SexyAppBase::DrawDirtyStuff()
 		g.SetColor(Color(128, 255, 128));
 		g.FillRect(Rect(10, 5, aTicks, 6));
 
-		// Checkpoints 20/21 = about-to/returned DoLoadImage, 22/23 = DoLoadSound,
-		// 24/25 = DoLoadFont (set in ResourceManager.cpp). Whichever "about-to"
-		// square is lit with its "returned" pair still dark is the resource
-		// type currently stuck.
-		uint64_t aMask = WiiDebugGetCheckpointMask();
-		static const int aCheckpointIds[6] = { 20, 21, 22, 23, 24, 25 };
-		for (int i = 0; i < 6; i++)
+		// Live (non-sticky) indicator of what LoadNextResource is in the
+		// middle of RIGHT NOW - gray=idle, blue=image, red=sound,
+		// yellow=font. Unlike the checkpoint mask (which stays lit forever
+		// once any resource of that type has ever loaded), this only shows
+		// the current one, so it directly identifies what's actually stuck.
+		Color aTypeColor = Color(48, 48, 48);
+		if (::gWiiDebugCurrentResType == 1) aTypeColor = Color(0, 120, 255);
+		else if (::gWiiDebugCurrentResType == 2) aTypeColor = Color(255, 40, 40);
+		else if (::gWiiDebugCurrentResType == 3) aTypeColor = Color(255, 220, 0);
+		g.SetColor(aTypeColor);
+		g.FillRect(Rect(10, 14, 24, 24));
+
+		// First ~15 chars of the stuck resource's path, one row of 8
+		// bit-squares per character (MSB first) - same encoding as the
+		// resources.xml byte check further down; read top-to-bottom,
+		// left-to-right per row, 8 bits -> 1 ASCII char.
+		for (int aCh = 0; aCh < 15 && ::gWiiDebugCurrentResPath[aCh] != '\0'; aCh++)
 		{
-			bool aHit = (aMask >> aCheckpointIds[i]) & 1;
-			g.SetColor(aHit ? Color(0, 200, 255) : Color(48, 48, 48));
-			g.FillRect(Rect(10 + i * 14, 14, 12, 12));
+			unsigned char aByte = (unsigned char)::gWiiDebugCurrentResPath[aCh];
+			for (int aBit = 0; aBit < 8; aBit++)
+			{
+				bool aSet = (aByte >> (7 - aBit)) & 1;
+				g.SetColor(aSet ? Color(255, 0, 128) : Color(40, 40, 40));
+				g.FillRect(Rect(44 + aBit * 12, 14 + aCh * 12, 10, 10));
+			}
 		}
 		drewScreen = true;
 	}
