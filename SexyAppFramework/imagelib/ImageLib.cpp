@@ -1197,8 +1197,13 @@ Image* GetJPEGImage(const std::string& theFileName)
 {
 	PFILE *fp;
 
+	TodTraceAndLog("GetJPEGImage: opening '%s'\n", theFileName.c_str());
+
 	if ((fp = p_fopen(theFileName.c_str(), "rb")) == NULL)
+	{
+		TodTraceAndLog("GetJPEGImage: p_fopen failed for '%s'\n", theFileName.c_str());
 		return NULL;
+	}
 
 	struct jpeg_decompress_struct cinfo;
 	struct my_error_mgr jerr;
@@ -1211,6 +1216,7 @@ Image* GetJPEGImage(const std::string& theFileName)
 		/* If we get here, the JPEG code has signaled an error.
 		 * We need to clean up the JPEG object, close the input file, and return.
 		 */
+		TodTraceAndLog("GetJPEGImage: libjpeg longjmp'd out (decode error) for '%s'\n", theFileName.c_str());
 		jpeg_destroy_decompress(&cinfo);
 		p_fclose(fp);
 		return 0;
@@ -1218,8 +1224,11 @@ Image* GetJPEGImage(const std::string& theFileName)
 
 	jpeg_create_decompress(&cinfo);
 	jpeg_pak_src(&cinfo, fp);
+	TodTraceAndLog("GetJPEGImage: about to jpeg_read_header\n");
 	jpeg_read_header(&cinfo, TRUE);
+	TodTraceAndLog("GetJPEGImage: about to jpeg_start_decompress\n");
 	jpeg_start_decompress(&cinfo);
+	TodTraceAndLog("GetJPEGImage: decompress started, %dx%d components=%d\n", cinfo.output_width, cinfo.output_height, cinfo.output_components);
 	int row_stride = cinfo.output_width * cinfo.output_components;
 
 	unsigned char** buffer = (*cinfo.mem->alloc_sarray)
@@ -1260,6 +1269,8 @@ Image* GetJPEGImage(const std::string& theFileName)
 		}
 	}
 
+	TodTraceAndLog("GetJPEGImage: scanline loop done\n");
+
 	Image* anImage = new Image();
 	anImage->mWidth = cinfo.output_width;
 	anImage->mHeight = cinfo.output_height;
@@ -1269,6 +1280,8 @@ Image* GetJPEGImage(const std::string& theFileName)
 	jpeg_destroy_decompress(&cinfo);
 
 	p_fclose(fp);
+
+	TodTraceAndLog("GetJPEGImage: returning image %dx%d\n", anImage->mWidth, anImage->mHeight);
 
 	return anImage;
 }
@@ -1383,9 +1396,11 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 	{
 		int aNewWidth = anImage->mWidth/IMG_DOWNSCALE;
 		int aNewHeight = anImage->mHeight/IMG_DOWNSCALE;
+		TodTraceAndLog("ImageLib::GetImage: decoded %dx%d, downscale=%d -> %dx%d\n", anImage->mWidth, anImage->mHeight, IMG_DOWNSCALE, aNewWidth, aNewHeight);
 		if (aNewWidth > 0 && aNewHeight > 0)
 		{
 			unsigned char* aNewData = Rescale(anImage->mWidth, anImage->mHeight, aNewWidth, aNewHeight, (unsigned char*)anImage->mBits);
+			TodTraceAndLog("ImageLib::GetImage: Rescale done\n");
 			delete[] anImage->mBits;
 			anImage->mBits = (uint32_t*)aNewData;
 			anImage->mWidth = aNewWidth;
