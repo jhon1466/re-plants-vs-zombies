@@ -28,4 +28,12 @@ extern int gWiiDebugResourceLoopCount;
 // one that's just iterating a very long extension-block chain.
 extern int gWiiDebugGifLoopCount;
 
+// Read-only access to the checkpoint bitmask for the always-on-top overlay
+// (SexyAppBase::DrawDirtyStuff) - once TitleScreen starts drawing full-
+// screen states over everything, the normal DrawState() squares are hidden,
+// but checkpoints 20-25 (DoLoadImage/DoLoadSound/DoLoadFont in-progress vs
+// returned) are exactly what's needed to tell which resource type is stuck
+// in the background loading thread.
+unsigned long long WiiDebugGetCheckpointMask();
+
 #endif // __SEXY_WII_DEBUG_H__

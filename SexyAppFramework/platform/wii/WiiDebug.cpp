@@ -118,6 +118,11 @@ void WiiDebugCheckpoint(int theId)
 	DrawState();
 }
 
+uint64_t WiiDebugGetCheckpointMask()
+{
+	return gCheckpointMask;
+}
+
 void WiiDebugRedraw()
 {
 	DrawState();

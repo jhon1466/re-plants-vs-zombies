@@ -3,6 +3,7 @@
 //#define SEXY_MEMTRACE
 
 #include <string>
+#include <cstdint>
 #include <fstream>
 #include <unistd.h>
 #include <time.h>
@@ -2785,6 +2786,19 @@ bool SexyAppBase::DrawDirtyStuff()
 		g.FillRect(Rect(10, 5, 380, 6));
 		g.SetColor(Color(128, 255, 128));
 		g.FillRect(Rect(10, 5, aTicks, 6));
+
+		// Checkpoints 20/21 = about-to/returned DoLoadImage, 22/23 = DoLoadSound,
+		// 24/25 = DoLoadFont (set in ResourceManager.cpp). Whichever "about-to"
+		// square is lit with its "returned" pair still dark is the resource
+		// type currently stuck.
+		uint64_t aMask = WiiDebugGetCheckpointMask();
+		static const int aCheckpointIds[6] = { 20, 21, 22, 23, 24, 25 };
+		for (int i = 0; i < 6; i++)
+		{
+			bool aHit = (aMask >> aCheckpointIds[i]) & 1;
+			g.SetColor(aHit ? Color(0, 200, 255) : Color(48, 48, 48));
+			g.FillRect(Rect(10 + i * 14, 14, 12, 12));
+		}
 		drewScreen = true;
 	}
 #endif
