@@ -1125,8 +1125,6 @@ bool DefinitionReadField(XMLParser* theXmlParser, DefMap* theDefMap, void* theDe
         return false;
     }
 
-    TodTraceAndLog("DefinitionReadField: tag='%s' line=%d file=%s\n", aXMLElement.mValue.c_str(), theXmlParser->GetCurrentLineNum(), theXmlParser->GetFileName().c_str());
-
     for (DefField* aField = theDefMap->mMapFields; *aField->mFieldName != '\0'; aField++)
     {
         void* pVar = (void*)((uintptr_t)theDefinition + aField->mFieldOffset);

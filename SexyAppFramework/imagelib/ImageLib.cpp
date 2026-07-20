@@ -7,10 +7,6 @@
 #include "paklib/PakInterface.h"
 #include "../../Sexy.TodLib/TodDebug.h"
 
-#ifdef __SWITCH__
-#include <malloc.h>
-#endif
-
 extern "C"
 {
 #include "jpeglib.h"
@@ -1121,18 +1117,12 @@ METHODDEF(void) init_source (j_decompress_ptr cinfo)
 	src->start_of_file = TRUE;
 }
 
-static int gFillInputBufferCallCount = 0;
-
 METHODDEF(boolean) fill_input_buffer (j_decompress_ptr cinfo)
 {
 	pak_src_ptr src = (pak_src_ptr) cinfo->src;
 	size_t nbytes;
 
-	gFillInputBufferCallCount++;
-	TodTraceAndLog("fill_input_buffer: call #%d\n", gFillInputBufferCallCount);
-
 	nbytes = p_fread(src->buffer, 1, INPUT_BUF_SIZE, src->infile);
-	TodTraceAndLog("fill_input_buffer: p_fread returned %u bytes\n", (unsigned int)nbytes);
 	//((size_t) fread((void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))
 
 	if (nbytes <= 0) {
@@ -1208,19 +1198,8 @@ Image* GetJPEGImage(const std::string& theFileName)
 {
 	PFILE *fp;
 
-	TodTraceAndLog("GetJPEGImage: opening '%s'\n", theFileName.c_str());
-#ifdef __SWITCH__
-	{
-		struct mallinfo aMi = mallinfo();
-		TodTraceAndLog("GetJPEGImage: heap arena=%u uordblks(used)=%u fordblks(free)=%u\n", aMi.arena, aMi.uordblks, aMi.fordblks);
-	}
-#endif
-
 	if ((fp = p_fopen(theFileName.c_str(), "rb")) == NULL)
-	{
-		TodTraceAndLog("GetJPEGImage: p_fopen failed for '%s'\n", theFileName.c_str());
 		return NULL;
-	}
 
 	struct jpeg_decompress_struct cinfo;
 	struct my_error_mgr jerr;
@@ -1233,7 +1212,6 @@ Image* GetJPEGImage(const std::string& theFileName)
 		/* If we get here, the JPEG code has signaled an error.
 		 * We need to clean up the JPEG object, close the input file, and return.
 		 */
-		TodTraceAndLog("GetJPEGImage: libjpeg longjmp'd out (decode error) for '%s'\n", theFileName.c_str());
 		jpeg_destroy_decompress(&cinfo);
 		p_fclose(fp);
 		return 0;
@@ -1241,23 +1219,15 @@ Image* GetJPEGImage(const std::string& theFileName)
 
 	jpeg_create_decompress(&cinfo);
 	jpeg_pak_src(&cinfo, fp);
-	TodTraceAndLog("GetJPEGImage: about to jpeg_read_header\n");
 	jpeg_read_header(&cinfo, TRUE);
-	TodTraceAndLog("GetJPEGImage: about to jpeg_start_decompress\n");
 	jpeg_start_decompress(&cinfo);
-	TodTraceAndLog("GetJPEGImage: decompress started, %dx%d components=%d\n", cinfo.output_width, cinfo.output_height, cinfo.output_components);
 	int row_stride = cinfo.output_width * cinfo.output_components;
 
 	unsigned char** buffer = (*cinfo.mem->alloc_sarray)
 		((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-	TodTraceAndLog("GetJPEGImage: allocating pixel buffer, %u bytes\n", (unsigned int)(cinfo.output_width*cinfo.output_height*sizeof(uint32_t)));
 	uint32_t* aBits = new uint32_t[cinfo.output_width*cinfo.output_height];
-	TodTraceAndLog("GetJPEGImage: pixel buffer allocated at %p\n", (void*)aBits);
 	uint32_t* q = aBits;
-
-	gFillInputBufferCallCount = 0;
-	TodTraceAndLog("GetJPEGImage: about to enter scanline loop\n");
 
 	if (cinfo.output_components==1)
 	{
@@ -1271,9 +1241,6 @@ Image* GetJPEGImage(const std::string& theFileName)
 				int r = *p++;
 				*q++ = 0xFF000000 | (r << 16) | (r << 8) | (r);
 			}
-
-			if ((cinfo.output_scanline % 100) == 0)
-				TodTraceAndLog("GetJPEGImage: scanline %u/%u\n", cinfo.output_scanline, cinfo.output_height);
 		}
 	}
 	else
@@ -1291,13 +1258,8 @@ Image* GetJPEGImage(const std::string& theFileName)
 
 				*q++ = 0xFF000000 | (r << 16) | (g << 8) | (b);
 			}
-
-			if ((cinfo.output_scanline % 100) == 0)
-				TodTraceAndLog("GetJPEGImage: scanline %u/%u\n", cinfo.output_scanline, cinfo.output_height);
 		}
 	}
-
-	TodTraceAndLog("GetJPEGImage: scanline loop done\n");
 
 	Image* anImage = new Image();
 	anImage->mWidth = cinfo.output_width;
@@ -1308,8 +1270,6 @@ Image* GetJPEGImage(const std::string& theFileName)
 	jpeg_destroy_decompress(&cinfo);
 
 	p_fclose(fp);
-
-	TodTraceAndLog("GetJPEGImage: returning image %dx%d\n", anImage->mWidth, anImage->mHeight);
 
 	return anImage;
 }
@@ -1424,7 +1384,6 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 	{
 		int aNewWidth = anImage->mWidth/IMG_DOWNSCALE;
 		int aNewHeight = anImage->mHeight/IMG_DOWNSCALE;
-		TodTraceAndLog("ImageLib::GetImage: decoded %dx%d, downscale=%d -> %dx%d\n", anImage->mWidth, anImage->mHeight, IMG_DOWNSCALE, aNewWidth, aNewHeight);
 		// IMG_DOWNSCALE==1 means aNewWidth/aNewHeight always equal the source
 		// dimensions - Rescale() would just allocate a same-size copy and
 		// throw the original away, doubling peak memory for every image
@@ -1434,7 +1393,6 @@ Image* ImageLib::GetImage(const std::string& theFilename, bool lookForAlphaImage
 		if (aNewWidth > 0 && aNewHeight > 0)
 		{
 			unsigned char* aNewData = Rescale(anImage->mWidth, anImage->mHeight, aNewWidth, aNewHeight, (unsigned char*)anImage->mBits);
-			TodTraceAndLog("ImageLib::GetImage: Rescale done\n");
 			delete[] anImage->mBits;
 			anImage->mBits = (uint32_t*)aNewData;
 			anImage->mWidth = aNewWidth;
